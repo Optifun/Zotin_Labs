@@ -45,6 +45,7 @@ T* Bubble(T* arr, long length)
 
 }
 
+//Сортировка чет-нечет
 template<class T>
 T* BubbleEven(T* arr, long length=-1)
 {
@@ -65,7 +66,21 @@ T* BubbleEven(T* arr, long length=-1)
 }
 
 template<class T>
-void BubbleEvenAsync(T*& arr, long &length)
+T* BubbleEvenAsync(T*& arr, long length)
 {
-
+	T* narr = new T[length];
+	memcpy(narr, arr, sizeof(T)*length);
+	bool sorted = false;
+	for (long i = 0; !sorted; i++)
+	{
+		sorted = true;
+		#pragma omp for shared(i, sorted, narr) 
+		for (long j = (i + 1) % 2; j < length - 1; j += 2)
+			if (narr[j] > narr[j + 1])
+			{
+				Swap(narr[j], narr[j + 1]);
+				sorted = false;
+			}
+	}
+	return narr;
 }
