@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include<omp.h>
-#include<Windows.h>
+//#include<Windows.h>
 
 //template<typename Type>
 typedef bool(*IntComparer)(int, int);
@@ -90,10 +90,10 @@ T* BubbleEvenAsync(T*& arr, long length, TComparer compare)
 }
 
 template<class T, typename TComparer>
-T* ShellSort(T *array, long length, TComparer compare)
+T* ShellSort(T *arr, long length, TComparer compare)
 {
 	T* narr = new T[length];
-	memcpy(narr, array, sizeof(T)*length);
+	memcpy(narr, arr, sizeof(T)*length);
 	long step, i, j, tmp;
 
 	for (step = length / 2; step > 0; step /= 2)
@@ -106,10 +106,10 @@ T* ShellSort(T *array, long length, TComparer compare)
 }
 
 template<class T, typename TComparer>
-T* ShellSortAsync(T *array, long length, TComparer compare)
+T* ShellSortAsync(T *arr, long length, TComparer compare)
 {
 	T* narr = new T[length];
-	memcpy(narr, array, sizeof(T)*length);
+	memcpy(narr, arr, sizeof(T)*length);
 	long step, i, j, tmp;
 
 	for (step = length / 2; step > 0; step /= 2)
@@ -120,4 +120,62 @@ T* ShellSortAsync(T *array, long length, TComparer compare)
 			for (j = i - step; j >= 0 && compare(narr[j], narr[j + step]); j -= step)
 				Swap(narr[j], narr[j + step]);
 	return narr;
+}
+
+template<class T>
+T* quickSortR(T* &arr, long length) {
+	// На входе - массив a[], a[N] - его последний элемент.
+
+	long i = 0, j = length - 1; 		// поставить указатели на исходные места
+	T* narr = new T[length];
+	memcpy(narr, array, sizeof(T)*length);
+	T temp, p;
+
+	p = narr[length >> 1];		// центральный элемент
+						// процедура разделения
+	do {
+		while (narr[i] < p) i++;
+		while (narr[j] > p) j--;
+
+		if (i <= j) {
+			Swap(narr[i], narr[j]);
+			i++; j--;
+		}
+	} while (i <= j);
+
+	// рекурсивные вызовы, если есть, что сортировать 
+	if (j > 0) quickSortR(narr, j);
+	if (length > i) quickSortR(narr + i, length - i);
+}
+
+template<class T>
+T* quickSortAsync(T* arr, long length) {
+	// На входе - массив a[], a[N] - его последний элемент.
+
+	long i = 0, j = length - 1; 		// поставить указатели на исходные места
+	T* narr = new T[length];
+	memcpy(narr, array, sizeof(T)*length);
+	T temp, p;
+	p = arr[length >> 1];		// центральный элемент
+								// процедура разделения
+	for (int partLen = length / 2; partLen > 1; partLen /= 2) // дроблю массив на подмассивы
+	{//parallel for
+		int count = length / partLen;
+		for (int part = 0; part < count; part++)
+		{
+			p = partLen / 2 + part*partLen;
+			do {
+				while (narr[i] < p) i++;
+				while (narr[j] > p) j--;
+
+				if (i <= j) {
+					Swap(narr[i], narr[j]);
+					i++; j--;
+				}
+			} while (i <= j);
+		}
+	}
+	// рекурсивные вызовы, если есть, что сортировать 
+	if (j > 0) quickSortR(arr, j);
+	if (length > i) quickSortR(arr + i, length - i);
 }
