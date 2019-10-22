@@ -5,6 +5,12 @@
 //template<typename Type>
 typedef bool(*IntComparer)(int, int);
 typedef bool(*DoubleComparer)(double, double);
+typedef int*(*SortingMethod)(int* arr, long length, IntComparer compare);
+
+const IntComparer Ascending = [](int one, int two)->bool { return one > two; }; //сортирует по возрастанию
+const IntComparer Descending = [](int one, int two)->bool { return one < two; }; //сортирует по убыванию
+
+
 
 template<class T>
 T Max(long count, T args, ...)
