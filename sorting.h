@@ -128,30 +128,53 @@ T* ShellSortAsync(T *arr, long length, TComparer compare)
 	return narr;
 }
 
-template<class T>
-T* quickSortR(T* &arr, long length) {
+//template<class T>
+//void quickSortR(T*& arr, long length) {
+//	// На входе - массив a[], a[N] - его последний элемент.
+//	long i = 0, j = length - 1; 		// поставить указатели на исходные места
+//	T p;
+//	p = arr[length >> 1];		// центральный элемент
+//						// процедура разделения
+//	do {
+//		while (arr[i] < p) i++;
+//		while (arr[j] > p) j--;
+//
+//		if (i <= j) {
+//			Swap(arr[i], arr[j]);
+//			i++; j--;
+//		}
+//	} while (i <= j);
+//
+//	// рекурсивные вызовы, если есть, что сортировать 
+//	if (j > 0) quickSortR(arr, j);
+//	T* pointer = &arr[i];
+//	if (length > i) quickSortR(pointer, length - i);
+//}
+
+//template<class T>
+void quickSortR(int* a, long N) {
 	// На входе - массив a[], a[N] - его последний элемент.
 
-	long i = 0, j = length - 1; 		// поставить указатели на исходные места
-	T* narr = new T[length];
-	memcpy(narr, array, sizeof(T)*length);
-	T temp, p;
+	long i = 0, j = N - 1; 		// поставить указатели на исходные места
+	int temp, p;
 
-	p = narr[length >> 1];		// центральный элемент
+	p = a[N >> 1];		// центральный элемент
+
 						// процедура разделения
 	do {
-		while (narr[i] < p) i++;
-		while (narr[j] > p) j--;
+		while (a[i] < p) i++;
+		while (a[j] > p) j--;
 
 		if (i <= j) {
-			Swap(narr[i], narr[j]);
+			temp = a[i]; a[i] = a[j]; a[j] = temp;
 			i++; j--;
 		}
 	} while (i <= j);
 
+
 	// рекурсивные вызовы, если есть, что сортировать 
-	if (j > 0) quickSortR(narr, j);
-	if (length > i) quickSortR(narr + i, length - i);
+	if (j > 0) quickSortR(a, j);
+	if (N > i) quickSortR(a + i, N - i);
 }
 
 template<class T>
@@ -160,13 +183,14 @@ T* quickSortAsync(T* arr, long length) {
 
 	long i = 0, j = length - 1; 		// поставить указатели на исходные места
 	T* narr = new T[length];
-	memcpy(narr, array, sizeof(T)*length);
+	memcpy(narr, arr, sizeof(T)*length);
 	T temp, p;
-	p = arr[length >> 1];		// центральный элемент
+	//p = arr[length >> 1];		// центральный элемент
 								// процедура разделения
-	for (int partLen = length / 2; partLen > 1; partLen /= 2) // дроблю массив на подмассивы
+	for (int partLen = length; partLen > 1; partLen /= 2) // дроблю массив на подмассивы
 	{//parallel for
 		int count = length / partLen;
+		#pragma omp parallel for shared(narr) firstprivate(i, j, part, partLen)
 		for (int part = 0; part < count; part++)
 		{
 			p = partLen / 2 + part*partLen;
@@ -182,6 +206,8 @@ T* quickSortAsync(T* arr, long length) {
 		}
 	}
 	// рекурсивные вызовы, если есть, что сортировать 
-	if (j > 0) quickSortR(arr, j);
-	if (length > i) quickSortR(arr + i, length - i);
+	//if (j > 0) quickSortR(arr, j);
+	//T* pointer = &arr[i];
+	//if (length > i) quickSortR(pointer, length - i);
+	return narr;
 }
