@@ -169,11 +169,11 @@ void quickSortR(int* a, long N) {
 			temp = a[i]; a[i] = a[j]; a[j] = temp;
 			i++; j--;
 		}
-	} while (i <= j);
+	} while (i < j);
 
 
 	// рекурсивные вызовы, если есть, что сортировать 
-	if (j > 0) quickSortR(a, j);
+	if (j > 0) quickSortR(a, j + 1);
 	if (N > i) quickSortR(a + i, N - i);
 }
 
