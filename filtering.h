@@ -74,7 +74,7 @@ RGBQUAD* sortRGB(RGBQUAD* arr, long length, ByteSortingMethod method)
 	green = method(green, length, Ascending);
 	RGBQUAD* narr = new RGBQUAD[length];
 	for (int i = 0; i < length; i++)
-		narr[i] = {red[i], blue[i], green[i], 0};
+		narr[i] = {blue[i], green[i],red[i],  0};
 	return narr;
 }
 
