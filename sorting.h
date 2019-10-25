@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include<omp.h>
 //#include<Windows.h>
-
+#include<queue>
 //template<typename Type>
 typedef bool(*IntComparer)(int, int);
 typedef bool(*DoubleComparer)(double, double);
@@ -177,37 +177,106 @@ void quickSortR(int* a, long N) {
 	if (N > i) quickSortR(a + i, N - i);
 }
 
-template<class T>
-T* quickSortAsync(T* arr, long length) {
-	// На входе - массив a[], a[N] - его последний элемент.
+//template<class T>
+int* quickSortAsync(int* arr, long length) {
+	int* narr = new int[length];
+	memcpy(narr, arr, sizeof(int)*length);
 
-	long i = 0, j = length - 1; 		// поставить указатели на исходные места
-	T* narr = new T[length];
-	memcpy(narr, arr, sizeof(T)*length);
-	T temp, p;
-	//p = arr[length >> 1];		// центральный элемент
-								// процедура разделения
-	for (int partLen = length; partLen > 1; partLen /= 2) // дроблю массив на подмассивы
-	{//parallel for
-		int count = length / partLen;
-		#pragma omp parallel for shared(narr) firstprivate(i, j, part, partLen)
+	// очередь границ интервалов
+	std::queue<int> iterators = std::queue<int>();
+	long i = 0, j = length - 1;
+	int p; // опорный элемент
+	long b = 0, e = length-1; //начало и конец массива(включительно)
+	iterators.push(b);
+	iterators.push(e);
+	for (int partLen = length; partLen > 0; partLen /= 2) // дроблю массив на подмассивы
+	{
+		
+		int count = length / partLen; //count = [1, 2, ..., length]
+		//#pragma omp parallel for shared(narr, odd) firstprivate(i, j, part, partLen)
 		for (int part = 0; part < count; part++)
 		{
-			p = partLen / 2 + part*partLen;
+			// достаю из очереди начало и конец массива
+			b = i = iterators.front(); iterators.pop();
+			e = j = iterators.front(); iterators.pop();
+			if (b >= e)
+				continue;
+			p = narr[(e + b + 1) / 2]; // выбираю опорный элемент
+
+			//вывожу массив
+			for (int _i=b; _i <= e; _i++)
+				std::cout << narr[_i] << " ";
+			std::cout << std::endl;
+			std::cout << "i = " << i << " j = " << j << std::endl;
+			std::cout <<"p = " << p << std::endl;
+
+			//стандартный алгоритм
 			do {
 				while (narr[i] < p) i++;
 				while (narr[j] > p) j--;
 
 				if (i <= j) {
+					std::cout << narr[i] << "<->" << narr[j] << std::endl;
 					Swap(narr[i], narr[j]);
+					for (int _i = b; _i <= e; _i++)
+						std::cout << narr[_i] << " ";
+					std::cout << std::endl;
 					i++; j--;
 				}
-			} while (i <= j);
+			} while (i < j);
+
+
+			if (j > b) // если j не достигнула начала
+			{
+				iterators.push(b); // i = b
+				std::cout << "(" << b << " : ";
+				auto t = e - j; // избыток, чтобы не уйти за границы массива
+				if (t < 0)
+				{
+					iterators.push(j); // j = j
+					std::cout << j + t << ")";
+				}
+				else
+				{
+					iterators.push(j);
+					std::cout << j << ")";
+				}
+
+			}
+			else // иначе создаю пустой интервалл
+			{
+				std::cout << "(" << b << " : ";
+				std::cout << b - 1 << ")";
+				iterators.push(b);
+				iterators.push(b-1);
+			}
+
+			if (e >= i) //если i не достигла конца
+			{
+				//возможно прибавлять b это очень лишнее действие
+				auto t = e - (b + i + 1);
+				if (t < 0)
+				{
+					iterators.push(i +1 + t);
+					std::cout << "(" << b + i +1 + t << " : ";
+				}
+				else
+				{
+					iterators.push(b + i +1);
+					std::cout << "(" << b + i +1 << " : ";
+				}
+				iterators.push(e);
+				std::cout << e << ")\n";
+			}
+			else
+			{
+				std::cout << "(" << b+i << " : ";
+				std::cout << b+i - 1 << ")\n";
+				iterators.push(i);
+				iterators.push(i-1);
+			}
 		}
+		std::cout << std::endl;
 	}
-	// рекурсивные вызовы, если есть, что сортировать 
-	//if (j > 0) quickSortR(arr, j);
-	//T* pointer = &arr[i];
-	//if (length > i) quickSortR(pointer, length - i);
 	return narr;
 }
