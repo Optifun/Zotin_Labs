@@ -97,3 +97,84 @@ RGBQUAD** medialFiltering(Bitmap image, int wHeight, int wWidth)
 	}
 	return out;
 }
+
+//медиальная фильтрация for
+RGBQUAD** medialFilteringAsync(Bitmap image, int wHeight, int wWidth, ByteSortingMethod method)
+{
+	RGBQUAD **out = new RGBQUAD*[image.height];
+	RGBQUAD *temp;
+	for (int y = 0; y < image.height; y++)
+	{
+		out[y] = new RGBQUAD[image.width];
+		#pragma omp parallel for private(temp, x, y) shared(image, out)
+		for (int x = 0; x < image.width; x++)
+		{
+			//в окне H x W ложу пиксели в массив temp
+			temp = getMedial(image, x, y, wHeight / 2, wWidth / 2); //заполняю медиальный массив
+																	//temp = BubbleEven(temp, wHeight * wWidth, [](RGBQUAD one, RGBQUAD two)->bool {return one.rgbBlue+one.rgbGreen+one.rgbRed > two.rgbBlue+two.rgbGreen+two.rgbRed; }); //сортирую массив
+			temp = sortRGB(temp, wHeight * wWidth, method);
+			out[y][x] = temp[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+		}
+	}
+	return out;
+}
+
+//медиальная фильтрация sections
+RGBQUAD** medialFilteringAsyncSec(Bitmap image, int wHeight, int wWidth, ByteSortingMethod method, int sections)
+{
+	RGBQUAD **out = new RGBQUAD*[image.height];
+	RGBQUAD *temp;
+	float step = image.width / sections;
+	int t1 = 0;
+	int t2 = step * 1;
+	int t3 = step * 2;
+	int t4 = step * 3;
+	for (int y = 0; y < image.height; y++)
+	{
+		out[y] = new RGBQUAD[image.width];
+		#pragma omp parallel sections private(temp, x, y) shared(image, out)
+		{
+			#pragma omp section
+			{
+				for (int x = t1; x < t2; x++)
+				{
+					temp = getMedial(image, x, y, wHeight / 2, wWidth / 2); //заполняю медиальный массив
+					temp = sortRGB(temp, wHeight * wWidth, method);
+					out[y][x] = temp[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+				}
+			}
+#pragma omp section
+			{
+				if (sections>=2)
+				for (int x = t2; x < t3; x++)
+				{
+					temp = getMedial(image, x, y, wHeight / 2, wWidth / 2); //заполняю медиальный массив
+					temp = sortRGB(temp, wHeight * wWidth, method);
+					out[y][x] = temp[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+				}
+			}
+#pragma omp section
+			{
+				if (sections>=3)
+				for (int x = t3; x < t4; x++)
+				{
+					temp = getMedial(image, x, y, wHeight / 2, wWidth / 2); //заполняю медиальный массив
+					temp = sortRGB(temp, wHeight * wWidth, method);
+					out[y][x] = temp[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+				}
+			}
+#pragma omp section
+			{
+				if (sections>=4)
+				for (int x = t4; x < t4+step; x++)
+				{
+					temp = getMedial(image, x, y, wHeight / 2, wWidth / 2); //заполняю медиальный массив
+					temp = sortRGB(temp, wHeight * wWidth, method);
+					out[y][x] = temp[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+				}
+			}
+		}
+
+	}
+	return out;
+}
