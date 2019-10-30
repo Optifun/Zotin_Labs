@@ -3,10 +3,47 @@
 #include<queue>
 typedef bool(*IntComparer)(int, int);
 typedef bool(*DoubleComparer)(double, double);
-typedef int*(*SortingMethod)(int* arr, long length, IntComparer compare);
 
-const IntComparer Ascending = [](int one, int two)->bool { return one > two; }; //сортирует по возрастанию
-const IntComparer Descending = [](int one, int two)->bool { return one < two; }; //сортирует по убыванию
+typedef int*(*SortingInt)(int* arr, long length, IntComparer compare);//Алгоритм сортировки целых чисел
+typedef double*(*SortingDouble)(double* arr, long length, DoubleComparer compare);//Алгоритм сортировки чисел с плавающей точкой
+
+const IntComparer AscInt = [](int one, int two)->bool { return one > two; }; //сортирует по возрастанию
+const IntComparer DescInt = [](int one, int two)->bool { return one < two; }; //сортирует по убыванию
+const DoubleComparer AscDouble = [](double one, double two)->bool { return one > two; }; //сортирует по возрастанию
+const DoubleComparer DescDouble = [](double one, double two)->bool { return one < two; }; //сортирует по убыванию
+
+#define Random(a, b) (double)rand() / (RAND_MAX + 1)*((b)-(a)) + (a)
+
+//Не советую трогать, изучать. Лучше не стоит..
+namespace magic
+{
+template<class T>
+class Comparator
+{
+public:
+	bool operator()(const T& one, const T& two)
+	{
+		return ASC == order_ ? (two < one) : (one < two);
+	}
+	//по возрастанию
+	static const Comparator& Asc()
+	{
+		return asc_;
+	}
+	//по убыванию
+	static const Comparator& Desc()
+	{
+		return desc_;
+	}
+private:
+	enum Order_ { ASC, DESC } const order_;
+	Comparator(Order_ order) : order_(order) {}; // первичная инициализация
+	static Comparator asc_;
+	static Comparator desc_;
+};
+template<class T> Comparator<T> Comparator<T>::asc_(Comparator<T>::ASC); //инициализация
+template<class T> Comparator<T> Comparator<T>::desc_(Comparator<T>::DESC);
+}
 
 //Проверяет последовательность на упорядоченноть
 template<class T>
@@ -103,7 +140,7 @@ T* BubbleEvenAsync(T* arr, long length, TComparer compare)
 	for (long i = 0; !sorted; i++)
 	{
 		sorted = true;
-		#pragma omp for shared(i, sorted, narr) 
+		#pragma omp parallel for shared(i, sorted, narr) 
 		for (long j = (i + 1) % 2; j < length - 1; j += 2)
 			if (compare(narr[j], narr[j + 1]))
 			{
@@ -149,28 +186,6 @@ T* ShellSortAsync(T *arr, long length, TComparer compare)
 	return narr;
 }
 
-//template<class T>
-//void quickSortR(T*& arr, long length) {
-//	// На входе - массив a[], a[N] - его последний элемент.
-//	long i = 0, j = length - 1; 		// поставить указатели на исходные места
-//	T p;
-//	p = arr[length >> 1];		// центральный элемент
-//						// процедура разделения
-//	do {
-//		while (arr[i] < p) i++;
-//		while (arr[j] > p) j--;
-//
-//		if (i <= j) {
-//			Swap(arr[i], arr[j]);
-//			i++; j--;
-//		}
-//	} while (i <= j);
-//
-//	// рекурсивные вызовы, если есть, что сортировать 
-//	if (j > 0) quickSortR(arr, j);
-//	T* pointer = &arr[i];
-//	if (length > i) quickSortR(pointer, length - i);
-//}
 //Быстрая сортировка
 template<class T>
 void quickSortR(T* a, long N) {
