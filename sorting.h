@@ -1,8 +1,6 @@
 ﻿#pragma once
 #include<omp.h>
-//#include<Windows.h>
 #include<queue>
-//template<typename Type>
 typedef bool(*IntComparer)(int, int);
 typedef bool(*DoubleComparer)(double, double);
 typedef int*(*SortingMethod)(int* arr, long length, IntComparer compare);
@@ -10,8 +8,26 @@ typedef int*(*SortingMethod)(int* arr, long length, IntComparer compare);
 const IntComparer Ascending = [](int one, int two)->bool { return one > two; }; //сортирует по возрастанию
 const IntComparer Descending = [](int one, int two)->bool { return one < two; }; //сортирует по убыванию
 
+//Проверяет последовательность на упорядоченноть
+template<class T>
+bool isOrdered(T* arr, long length, IntComparer order)
+{
+	bool ord = true;
+	for (int i = 0; i < length - 1; i++)
+		if (order(arr[i], arr[i + 1]))
+			return false;
+	return true;
+}
 
+//Заполняет последовательность случайными числами
+template<class T>
+void Randomize(T *arr, long length)
+{
+	for (long i = 0; i < length; i++)
+		arr[i] = Random(-50, 50);
+}
 
+//Находит максимальный элемент в последовательности аргументов
 template<class T>
 T Max(long count, T args, ...)
 {
@@ -25,6 +41,7 @@ T Max(long count, T args, ...)
 	return _max;
 }
 
+//Обмен значениями
 template<class T>
 void Swap(T& one, T& two)
 {
@@ -33,8 +50,9 @@ void Swap(T& one, T& two)
 	two = temp;
 }
 
+//Сортировка обменами
 template<class T, typename TComparer>
-T* Bubble(T* arr, long length, TComparer copare)
+T* Bubble(T* arr, long length, TComparer compare)
 {
 	bool sorted = false;
 	T* narr = new T[length];
@@ -75,8 +93,9 @@ T* BubbleEven(T* arr, long length, TComparer compare)
 	return narr;
 }
 
+//Сортировка чет-нечет параллельная
 template<class T, typename TComparer>
-T* BubbleEvenAsync(T*& arr, long length, TComparer compare)
+T* BubbleEvenAsync(T* arr, long length, TComparer compare)
 {
 	T* narr = new T[length];
 	memcpy(narr, arr, sizeof(T)*length);
@@ -95,6 +114,7 @@ T* BubbleEvenAsync(T*& arr, long length, TComparer compare)
 	return narr;
 }
 
+//Сортировка Шелла
 template<class T, typename TComparer>
 T* ShellSort(T *arr, long length, TComparer compare)
 {
@@ -111,6 +131,7 @@ T* ShellSort(T *arr, long length, TComparer compare)
 	return narr;
 }
 
+//Сортировка Шелла параллельная
 template<class T, typename TComparer>
 T* ShellSortAsync(T *arr, long length, TComparer compare)
 {
@@ -150,31 +171,28 @@ T* ShellSortAsync(T *arr, long length, TComparer compare)
 //	T* pointer = &arr[i];
 //	if (length > i) quickSortR(pointer, length - i);
 //}
-
-//template<class T>
-void quickSortR(int* a, long N) {
-	// На входе - массив a[], a[N] - его последний элемент.
-
-	long i = 0, j = N - 1; 		// поставить указатели на исходные места
-	int temp, p;
-
-	p = a[N >> 1];		// центральный элемент
-
-						// процедура разделения
+//Быстрая сортировка
+template<class T>
+void quickSortR(T* a, long N) {
+	long i = 0, j = N - 1;
+	T  p;
+	p = a[N >> 1];
 	do {
 		while (a[i] < p) i++;
 		while (a[j] > p) j--;
 
 		if (i <= j) {
-			temp = a[i]; a[i] = a[j]; a[j] = temp;
+			Swap(a[i], a[j]);
 			i++; j--;
 		}
 	} while (i < j);
-
-
-	// рекурсивные вызовы, если есть, что сортировать 
-	if (j > 0) quickSortR(a, j + 1);
-	if (N > i) quickSortR(a + i, N - i);
+	//if (j > 0) cout << "( 0 : " << j << " )";
+	//if (N > i) cout << "( " << i << " : " << N-1 << " )";
+	//cout << endl;
+	if (j > 0)
+		quickSortR(a, j + 1);
+	if (N > i)
+		quickSortR(a + i, N - i);
 }
 
 //template<class T>
