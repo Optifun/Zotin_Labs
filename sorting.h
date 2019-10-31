@@ -210,106 +210,244 @@ void quickSortR(T* a, long N) {
 		quickSortR(a + i, N - i);
 }
 
-//template<class T>
-int* quickSortAsync(int* arr, long length) {
-	int* narr = new int[length];
-	memcpy(narr, arr, sizeof(int)*length);
+////template<class T>
+//int* quickSortAsync(int* arr, long length) {
+//	int* narr = new int[length];
+//	memcpy(narr, arr, sizeof(int)*length);
+//
+//	// очередь границ интервалов
+//	std::queue<int> iterators = std::queue<int>();
+//	long i = 0, j = length - 1;
+//	int p; // опорный элемент
+//	long b = 0, e = length-1; //начало и конец массива(включительно)
+//	iterators.push(b);
+//	iterators.push(e);
+//	for (int partLen = length; partLen > 0; partLen /= 2) // дроблю массив на подмассивы
+//	{
+//		
+//		int count = length / partLen; //count = [1, 2, ..., length]
+//		//#pragma omp parallel for shared(narr, odd) firstprivate(i, j, part, partLen)
+//		for (int part = 0; part < count; part++)
+//		{
+//			// достаю из очереди начало и конец массива
+//			b = i = iterators.front(); iterators.pop();
+//			e = j = iterators.front(); iterators.pop();
+//			if (b >= e)
+//				continue;
+//			p = narr[(e + b + 1) / 2]; // выбираю опорный элемент
+//
+//			//вывожу массив
+//			for (int _i=b; _i <= e; _i++)
+//				std::cout << narr[_i] << " ";
+//			std::cout << std::endl;
+//			std::cout << "i = " << i << " j = " << j << std::endl;
+//			std::cout <<"p = " << p << std::endl;
+//
+//			//стандартный алгоритм
+//			do {
+//				while (narr[i] < p) i++;
+//				while (narr[j] > p) j--;
+//
+//				if (i <= j) {
+//					std::cout << narr[i] << "<->" << narr[j] << std::endl;
+//					Swap(narr[i], narr[j]);
+//					for (int _i = b; _i <= e; _i++)
+//						std::cout << narr[_i] << " ";
+//					std::cout << std::endl;
+//					i++; j--;
+//				}
+//			} while (i < j);
+//
+//
+//			if (j > b) // если j не достигнула начала
+//			{
+//				iterators.push(b); // i = b
+//				std::cout << "(" << b << " : ";
+//				auto t = e - j; // избыток, чтобы не уйти за границы массива
+//				if (t < 0)
+//				{
+//					iterators.push(j); // j = j
+//					std::cout << j + t << ")";
+//				}
+//				else
+//				{
+//					iterators.push(j);
+//					std::cout << j << ")";
+//				}
+//
+//			}
+//			else // иначе создаю пустой интервалл
+//			{
+//				std::cout << "(" << b << " : ";
+//				std::cout << b - 1 << ")";
+//				iterators.push(b);
+//				iterators.push(b-1);
+//			}
+//
+//			if (e >= i) //если i не достигла конца
+//			{
+//				//возможно прибавлять b это очень лишнее действие
+//				auto t = e - (b + i + 1);
+//				if (t < 0)
+//				{
+//					iterators.push(i +1 + t);
+//					std::cout << "(" << b + i +1 + t << " : ";
+//				}
+//				else
+//				{
+//					iterators.push(b + i +1);
+//					std::cout << "(" << b + i +1 << " : ";
+//				}
+//				iterators.push(e);
+//				std::cout << e << ")\n";
+//			}
+//			else
+//			{
+//				std::cout << "(" << b+i << " : ";
+//				std::cout << b+i - 1 << ")\n";
+//				iterators.push(i);
+//				iterators.push(i-1);
+//			}
+//		}
+//		std::cout << std::endl;
+//	}
+//	return narr;
+//}
 
-	// очередь границ интервалов
-	std::queue<int> iterators = std::queue<int>();
-	long i = 0, j = length - 1;
-	int p; // опорный элемент
-	long b = 0, e = length-1; //начало и конец массива(включительно)
-	iterators.push(b);
-	iterators.push(e);
-	for (int partLen = length; partLen > 0; partLen /= 2) // дроблю массив на подмассивы
-	{
-		
-		int count = length / partLen; //count = [1, 2, ..., length]
-		//#pragma omp parallel for shared(narr, odd) firstprivate(i, j, part, partLen)
-		for (int part = 0; part < count; part++)
-		{
-			// достаю из очереди начало и конец массива
-			b = i = iterators.front(); iterators.pop();
-			e = j = iterators.front(); iterators.pop();
-			if (b >= e)
-				continue;
-			p = narr[(e + b + 1) / 2]; // выбираю опорный элемент
+//Быстрая сортировка для 1-4 потоков
+template<class T>
+void quickSortOneThrd(T* a, long N) {
 
-			//вывожу массив
-			for (int _i=b; _i <= e; _i++)
-				std::cout << narr[_i] << " ";
-			std::cout << std::endl;
-			std::cout << "i = " << i << " j = " << j << std::endl;
-			std::cout <<"p = " << p << std::endl;
+	long i = 0, j = N - 1;
+	T temp, p;
+	p = a[N >> 1];
+	do {
+		while (a[i] < p) i++;
+		while (a[j] > p) j--;
 
-			//стандартный алгоритм
-			do {
-				while (narr[i] < p) i++;
-				while (narr[j] > p) j--;
-
-				if (i <= j) {
-					std::cout << narr[i] << "<->" << narr[j] << std::endl;
-					Swap(narr[i], narr[j]);
-					for (int _i = b; _i <= e; _i++)
-						std::cout << narr[_i] << " ";
-					std::cout << std::endl;
-					i++; j--;
-				}
-			} while (i < j);
-
-
-			if (j > b) // если j не достигнула начала
-			{
-				iterators.push(b); // i = b
-				std::cout << "(" << b << " : ";
-				auto t = e - j; // избыток, чтобы не уйти за границы массива
-				if (t < 0)
-				{
-					iterators.push(j); // j = j
-					std::cout << j + t << ")";
-				}
-				else
-				{
-					iterators.push(j);
-					std::cout << j << ")";
-				}
-
-			}
-			else // иначе создаю пустой интервалл
-			{
-				std::cout << "(" << b << " : ";
-				std::cout << b - 1 << ")";
-				iterators.push(b);
-				iterators.push(b-1);
-			}
-
-			if (e >= i) //если i не достигла конца
-			{
-				//возможно прибавлять b это очень лишнее действие
-				auto t = e - (b + i + 1);
-				if (t < 0)
-				{
-					iterators.push(i +1 + t);
-					std::cout << "(" << b + i +1 + t << " : ";
-				}
-				else
-				{
-					iterators.push(b + i +1);
-					std::cout << "(" << b + i +1 << " : ";
-				}
-				iterators.push(e);
-				std::cout << e << ")\n";
-			}
-			else
-			{
-				std::cout << "(" << b+i << " : ";
-				std::cout << b+i - 1 << ")\n";
-				iterators.push(i);
-				iterators.push(i-1);
-			}
+		if (i <= j) {
+			temp = a[i]; a[i] = a[j]; a[j] = temp;
+			i++; j--;
 		}
-		std::cout << std::endl;
+	} while (i < j);
+
+	if (j > 0) quickSortOneThrd(a, j + 1);
+	if (N > i) quickSortOneThrd(a + i, N - i);
+}
+template<class T>
+void quickSortTwoThrd(T* a, long N) {
+
+	long i = 0, j = N - 1;
+	T temp, p;
+	p = a[N >> 1];
+	do {
+		while (a[i] < p) i++;
+		while (a[j] > p) j--;
+
+		if (i <= j) {
+			temp = a[i]; a[i] = a[j]; a[j] = temp;
+			i++; j--;
+		}
+	} while (i < j);
+
+#pragma omp parallel sections
+	{
+#pragma omp section
+		{
+			if (j > 0) quickSortOneThrd(a, j + 1);
+		}
+#pragma omp section
+		{
+			if (N > i) quickSortOneThrd(a + i, N - i);
+		}
 	}
-	return narr;
+}
+template<class T>
+void quickSortFourThrd(T* a, long N) {
+
+	long i = 0, j = N - 1;
+	T temp, p;
+	p = a[N >> 1];
+	do {
+		while (a[i] < p) i++;
+		while (a[j] > p) j--;
+
+		if (i <= j) {
+			temp = a[i]; a[i] = a[j]; a[j] = temp;
+			i++; j--;
+		}
+	} while (i < j);
+
+	T* a1 = a;
+	long N1 = j + 1;
+	long i1 = 0, j1 = N1 - 1;
+	if (j > 0) {
+		T temp1, p1;
+		p1 = a1[N1 >> 1];
+		do {
+			while (a1[i1] < p1) i1++;
+			while (a1[j1] > p1) j1--;
+
+			if (i1 <= j1) {
+				temp1 = a1[i1]; a1[i1] = a1[j1]; a1[j1] = temp1;
+				i1++; j1--;
+			}
+		} while (i1 < j1);
+	}
+
+	T* a2 = a + i;
+	long N2 = N - i;
+	long i2 = 0, j2 = N2 - 1;
+	if (N > i) {
+		T temp2, p2;
+		p2 = a2[N2 >> 1];
+		do {
+			while (a2[i2] < p2) i2++;
+			while (a2[j2] > p2) j2--;
+
+			if (i2 <= j2) {
+				temp2 = a2[i2]; a2[i2] = a2[j2]; a2[j2] = temp2;
+				i2++; j2--;
+			}
+		} while (i2 < j2);
+	}
+
+#pragma omp parallel sections
+	{
+#pragma omp section 
+		{
+			if (j1 > 0 && j > 0) quickSortOneThrd<T>(a1, j1 + 1);
+		}
+#pragma omp section
+		{
+			if (N1 > i1 && j > 0) quickSortOneThrd<T>(a1 + i1, N1 - i1);
+		}
+#pragma omp section 
+		{
+			if (j2 > 0 && N > i) quickSortOneThrd<T>(a2, j2 + 1);
+		}
+#pragma omp section
+		{
+			if (N2 > i && N > i) quickSortOneThrd<T>(a2 + i2, N2 - i2);
+		}
+	}
+}
+//Быстрая сортировка (main function)
+template<class T>
+void quickSortAsync(T* a, long N) {
+	switch (omp_get_max_threads())
+	{
+	case 1:
+		quickSortOneThrd<T>(a, N);
+		break;
+	case 2:
+		quickSortTwoThrd<T>(a, N);
+		break;
+	case 3:
+		quickSortTwoThrd<T>(a, N);
+		break;
+	default:
+		quickSortFourThrd<T>(a, N);
+		break;
+	}
 }
