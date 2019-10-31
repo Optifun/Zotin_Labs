@@ -210,6 +210,41 @@ void quickSortR(T* a, long N) {
 		quickSortR(a + i, N - i);
 }
 
+//Быстрая сортировка распараллеленая секциями
+template<class T>
+void quickSortAsync(T* a, long N) {
+
+	long i = 0, j = N - 1;
+	T temp, p;
+	p = a[N >> 1];
+	do {
+#pragma omp parallel sections shared(a, i, j)
+		{
+#pragma omp section
+			{ while (a[i] < p) i++; }
+#pragma omp section
+			{ while (a[j] > p) j--; }
+
+		}
+		if (i <= j) {
+			Swap(a[i], a[j]);
+			i++; j--;
+		}
+	} while (i < j);
+
+#pragma omp parallel sections shared(j, i, a)
+	{
+#pragma omp section
+		{
+			if (j > 0) quickSortAsync(a, j + 1);
+		}
+#pragma omp section
+		{
+			if (N > i) quickSortAsync(a + i, N - i);
+		}
+	}
+}
+
 ////template<class T>
 //int* quickSortAsync(int* arr, long length) {
 //	int* narr = new int[length];
@@ -315,139 +350,140 @@ void quickSortR(T* a, long N) {
 //}
 
 //Быстрая сортировка для 1-4 потоков
-template<class T>
-void quickSortOneThrd(T* a, long N) {
+//template<class T>
+//void quickSortOneThrd(T* a, long N) {
+//
+//	long i = 0, j = N - 1;
+//	T temp, p;
+//	p = a[N >> 1];
+//	do {
+//		while (a[i] < p) i++;
+//		while (a[j] > p) j--;
+//
+//		if (i <= j) {
+//			Swap(a[i], a[j]);
+//			i++; j--;
+//		}
+//	} while (i < j);
+//
+//	if (j > 0) quickSortOneThrd(a, j + 1);
+//	if (N > i) quickSortOneThrd(a + i, N - i);
+//}
 
-	long i = 0, j = N - 1;
-	T temp, p;
-	p = a[N >> 1];
-	do {
-		while (a[i] < p) i++;
-		while (a[j] > p) j--;
-
-		if (i <= j) {
-			temp = a[i]; a[i] = a[j]; a[j] = temp;
-			i++; j--;
-		}
-	} while (i < j);
-
-	if (j > 0) quickSortOneThrd(a, j + 1);
-	if (N > i) quickSortOneThrd(a + i, N - i);
-}
-template<class T>
-void quickSortTwoThrd(T* a, long N) {
-
-	long i = 0, j = N - 1;
-	T temp, p;
-	p = a[N >> 1];
-	do {
-		while (a[i] < p) i++;
-		while (a[j] > p) j--;
-
-		if (i <= j) {
-			temp = a[i]; a[i] = a[j]; a[j] = temp;
-			i++; j--;
-		}
-	} while (i < j);
-
-#pragma omp parallel sections
-	{
-#pragma omp section
-		{
-			if (j > 0) quickSortOneThrd(a, j + 1);
-		}
-#pragma omp section
-		{
-			if (N > i) quickSortOneThrd(a + i, N - i);
-		}
-	}
-}
-template<class T>
-void quickSortFourThrd(T* a, long N) {
-
-	long i = 0, j = N - 1;
-	T temp, p;
-	p = a[N >> 1];
-	do {
-		while (a[i] < p) i++;
-		while (a[j] > p) j--;
-
-		if (i <= j) {
-			temp = a[i]; a[i] = a[j]; a[j] = temp;
-			i++; j--;
-		}
-	} while (i < j);
-
-	T* a1 = a;
-	long N1 = j + 1;
-	long i1 = 0, j1 = N1 - 1;
-	if (j > 0) {
-		T temp1, p1;
-		p1 = a1[N1 >> 1];
-		do {
-			while (a1[i1] < p1) i1++;
-			while (a1[j1] > p1) j1--;
-
-			if (i1 <= j1) {
-				temp1 = a1[i1]; a1[i1] = a1[j1]; a1[j1] = temp1;
-				i1++; j1--;
-			}
-		} while (i1 < j1);
-	}
-
-	T* a2 = a + i;
-	long N2 = N - i;
-	long i2 = 0, j2 = N2 - 1;
-	if (N > i) {
-		T temp2, p2;
-		p2 = a2[N2 >> 1];
-		do {
-			while (a2[i2] < p2) i2++;
-			while (a2[j2] > p2) j2--;
-
-			if (i2 <= j2) {
-				temp2 = a2[i2]; a2[i2] = a2[j2]; a2[j2] = temp2;
-				i2++; j2--;
-			}
-		} while (i2 < j2);
-	}
-
-#pragma omp parallel sections
-	{
-#pragma omp section 
-		{
-			if (j1 > 0 && j > 0) quickSortOneThrd<T>(a1, j1 + 1);
-		}
-#pragma omp section
-		{
-			if (N1 > i1 && j > 0) quickSortOneThrd<T>(a1 + i1, N1 - i1);
-		}
-#pragma omp section 
-		{
-			if (j2 > 0 && N > i) quickSortOneThrd<T>(a2, j2 + 1);
-		}
-#pragma omp section
-		{
-			if (N2 > i && N > i) quickSortOneThrd<T>(a2 + i2, N2 - i2);
-		}
-	}
-}
+//template<class T>
+//void quickSortTwoThrd(T* a, long N) {
+//
+//	long i = 0, j = N - 1;
+//	T temp, p;
+//	p = a[N >> 1];
+//	do {
+//		while (a[i] < p) i++;
+//		while (a[j] > p) j--;
+//
+//		if (i <= j) {
+//			temp = a[i]; a[i] = a[j]; a[j] = temp;
+//			i++; j--;
+//		}
+//	} while (i < j);
+//
+//#pragma omp parallel sections
+//	{
+//#pragma omp section
+//		{
+//			if (j > 0) quickSortOneThrd(a, j + 1);
+//		}
+//#pragma omp section
+//		{
+//			if (N > i) quickSortOneThrd(a + i, N - i);
+//		}
+//	}
+//}
+//template<class T>
+//void quickSortFourThrd(T* a, long N) {
+//
+//	long i = 0, j = N - 1;
+//	T temp, p;
+//	p = a[N >> 1];
+//	do {
+//		while (a[i] < p) i++;
+//		while (a[j] > p) j--;
+//
+//		if (i <= j) {
+//			temp = a[i]; a[i] = a[j]; a[j] = temp;
+//			i++; j--;
+//		}
+//	} while (i < j);
+//
+//	T* a1 = a;
+//	long N1 = j + 1;
+//	long i1 = 0, j1 = N1 - 1;
+//	if (j > 0) {
+//		T temp1, p1;
+//		p1 = a1[N1 >> 1];
+//		do {
+//			while (a1[i1] < p1) i1++;
+//			while (a1[j1] > p1) j1--;
+//
+//			if (i1 <= j1) {
+//				temp1 = a1[i1]; a1[i1] = a1[j1]; a1[j1] = temp1;
+//				i1++; j1--;
+//			}
+//		} while (i1 < j1);
+//	}
+//
+//	T* a2 = a + i;
+//	long N2 = N - i;
+//	long i2 = 0, j2 = N2 - 1;
+//	if (N > i) {
+//		T temp2, p2;
+//		p2 = a2[N2 >> 1];
+//		do {
+//			while (a2[i2] < p2) i2++;
+//			while (a2[j2] > p2) j2--;
+//
+//			if (i2 <= j2) {
+//				temp2 = a2[i2]; a2[i2] = a2[j2]; a2[j2] = temp2;
+//				i2++; j2--;
+//			}
+//		} while (i2 < j2);
+//	}
+//
+//#pragma omp parallel sections
+//	{
+//#pragma omp section 
+//		{
+//			if (j1 > 0 && j > 0) quickSortOneThrd<T>(a1, j1 + 1);
+//		}
+//#pragma omp section
+//		{
+//			if (N1 > i1 && j > 0) quickSortOneThrd<T>(a1 + i1, N1 - i1);
+//		}
+//#pragma omp section 
+//		{
+//			if (j2 > 0 && N > i) quickSortOneThrd<T>(a2, j2 + 1);
+//		}
+//#pragma omp section
+//		{
+//			if (N2 > i && N > i) quickSortOneThrd<T>(a2 + i2, N2 - i2);
+//		}
+//	}
+//}
 //Быстрая сортировка (main function)
-template<class T>
-void quickSortAsync(T* a, long N) {
-	switch (omp_get_max_threads())
-	{
-	case 1:
-		quickSortOneThrd<T>(a, N);
-		break;
-	case 2:
-		quickSortTwoThrd<T>(a, N);
-		break;
-	case 3:
-		quickSortTwoThrd<T>(a, N);
-		break;
-	default:
-		quickSortFourThrd<T>(a, N);
-		break;
-	}
-}
+//template<class T>
+//void quickSortAsync(T* a, long N) {
+//	switch (omp_get_max_threads())
+//	{
+//	case 1:
+//		quickSortOneThrd<T>(a, N);
+//		break;
+//	case 2:
+//		quickSortTwoThrd<T>(a, N);
+//		break;
+//	case 3:
+//		quickSortTwoThrd<T>(a, N);
+//		break;
+//	default:
+//		quickSortFourThrd<T>(a, N);
+//		break;
+//	}
+//}
