@@ -51,5 +51,5 @@ void BMPWrite(RGBQUAD** &rgb, BITMAPFILEHEADER &header, \
 			OutFile.write((char*)&(rgb[i][j]), 3);// .rgbBlue .rgbGreen .rgbRed;
         }
     // закрываем файл
-		OutFile.close();
+	OutFile.close();
 }
