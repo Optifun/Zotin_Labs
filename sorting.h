@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include<omp.h>
-#include<queue>
 typedef bool(*IntComparer)(int, int);
 typedef bool(*DoubleComparer)(double, double);
 
@@ -87,27 +86,24 @@ void Swap(T& one, T& two)
 	two = temp;
 }
 
-//Сортировка обменами
+//Сортировка пузырьком
 template<class T, typename TComparer>
 T* Bubble(T* arr, long length, TComparer compare)
 {
-	bool sorted = false;
 	T* narr = new T[length];
 	memcpy(narr, arr, sizeof(T)*length);
-	while (!sorted)
+	bool sorted = false;
+	for (long i = 0; i<length; i++)
 	{
-		sorted = true;
-		for (long i = 0; i < length-1; i++)
-		{
-			if (compare(narr[i], narr[i + 1]))
+		//sorted = true;
+		for (long j = 0; j < length - i - 1; j ++)
+			if (compare(narr[j], narr[j + 1]))
 			{
-				Swap(narr[i], narr[i + 1]);
-				sorted = false;
+				Swap(narr[j], narr[j + 1]);
+				//sorted = false;
 			}
-		}
 	}
 	return narr;
-
 }
 
 //Сортировка чет-нечет
@@ -117,14 +113,14 @@ T* BubbleEven(T* arr, long length, TComparer compare)
 	T* narr = new T[length];
 	memcpy(narr, arr, sizeof(T)*length);
 	bool sorted = false;
-	for (long i=0; !sorted; i++)
+	for (long i=0; i<length; i++)
 	{
-		sorted = true;
+		//sorted = true;
 		for (long j = (i + 1) % 2; j < length - 1; j += 2)
 			if (compare(narr[j], narr[j + 1]))
 			{
 				Swap(narr[j], narr[j + 1]);
-				sorted = false;
+				//sorted = false;
 			}
 	}
 	return narr;
@@ -137,15 +133,15 @@ T* BubbleEvenAsync(T* arr, long length, TComparer compare)
 	T* narr = new T[length];
 	memcpy(narr, arr, sizeof(T)*length);
 	bool sorted = false;
-	for (long i = 0; !sorted; i++)
+	for (long i = 0; i<length; i++)
 	{
-		sorted = true;
-		#pragma omp parallel for shared(i, sorted, narr) 
+		//sorted = true;
+		#pragma omp parallel for shared(i, sorted, narr,compare) 
 		for (long j = (i + 1) % 2; j < length - 1; j += 2)
 			if (compare(narr[j], narr[j + 1]))
 			{
 				Swap(narr[j], narr[j + 1]);
-				sorted = false;
+				//sorted = false;
 			}
 	}
 	return narr;
@@ -157,7 +153,7 @@ T* ShellSort(T *arr, long length, TComparer compare)
 {
 	T* narr = new T[length];
 	memcpy(narr, arr, sizeof(T)*length);
-	long step, i, j, tmp;
+	long step, i, j;
 
 	for (step = length / 2; step > 0; step /= 2)
 		// Перечисление элементов, которые сортируются на определённом шаге
@@ -174,11 +170,11 @@ T* ShellSortAsync(T *arr, long length, TComparer compare)
 {
 	T* narr = new T[length];
 	memcpy(narr, arr, sizeof(T)*length);
-	long step, i, j, tmp;
+	long step, i, j;
 
 	for (step = length / 2; step > 0; step /= 2)
 		// Перечисление элементов, которые сортируются на определённом шаге
-		#pragma omp parallel for shared(narr)
+		#pragma omp parallel for shared(narr, compare, step) private(j)
 		for (i = step; i < length; i++)
 			// Перестановка элементов внутри подсписка, пока i-тый не будет отсортирован
 			for (j = i - step; j >= 0 && compare(narr[j], narr[j + step]); j -= step)
@@ -201,9 +197,6 @@ void quickSortR(T* a, long N) {
 			i++; j--;
 		}
 	} while (i < j);
-	//if (j > 0) cout << "( 0 : " << j << " )";
-	//if (N > i) cout << "( " << i << " : " << N-1 << " )";
-	//cout << endl;
 	if (j > 0)
 		quickSortR(a, j + 1);
 	if (N > i)
@@ -212,17 +205,19 @@ void quickSortR(T* a, long N) {
 
 //Быстрая сортировка распараллеленая секциями
 template<class T>
-void quickSortAsync(T* a, long N) {
+void quickSortAsync2(T* a, long N, int threads) {
 
 	long i = 0, j = N - 1;
 	T temp, p;
 	p = a[N >> 1];
+	if (threads < 1)
+		threads = 1;
 	do {
-#pragma omp parallel sections shared(a, i, j)
+	#pragma omp parallel sections shared(a, i, j) num_threads(threads)
 		{
-#pragma omp section
+		#pragma omp section
 			{ while (a[i] < p) i++; }
-#pragma omp section
+		#pragma omp section
 			{ while (a[j] > p) j--; }
 
 		}
@@ -232,124 +227,20 @@ void quickSortAsync(T* a, long N) {
 		}
 	} while (i < j);
 
-#pragma omp parallel sections shared(j, i, a)
+	#pragma omp parallel sections shared(j, i, a) num_threads(threads)
 	{
-#pragma omp section
+		#pragma omp section
 		{
-			if (j > 0) quickSortAsync(a, j + 1);
+			if (j > 0) quickSortAsync2(a, j + 1, threads-1);
 		}
-#pragma omp section
+		#pragma omp section
 		{
-			if (N > i) quickSortAsync(a + i, N - i);
+			if (N > i) quickSortAsync2(a + i, N - i, threads-2);
 		}
 	}
 }
 
-////template<class T>
-//int* quickSortAsync(int* arr, long length) {
-//	int* narr = new int[length];
-//	memcpy(narr, arr, sizeof(int)*length);
-//
-//	// очередь границ интервалов
-//	std::queue<int> iterators = std::queue<int>();
-//	long i = 0, j = length - 1;
-//	int p; // опорный элемент
-//	long b = 0, e = length-1; //начало и конец массива(включительно)
-//	iterators.push(b);
-//	iterators.push(e);
-//	for (int partLen = length; partLen > 0; partLen /= 2) // дроблю массив на подмассивы
-//	{
-//		
-//		int count = length / partLen; //count = [1, 2, ..., length]
-//		//#pragma omp parallel for shared(narr, odd) firstprivate(i, j, part, partLen)
-//		for (int part = 0; part < count; part++)
-//		{
-//			// достаю из очереди начало и конец массива
-//			b = i = iterators.front(); iterators.pop();
-//			e = j = iterators.front(); iterators.pop();
-//			if (b >= e)
-//				continue;
-//			p = narr[(e + b + 1) / 2]; // выбираю опорный элемент
-//
-//			//вывожу массив
-//			for (int _i=b; _i <= e; _i++)
-//				std::cout << narr[_i] << " ";
-//			std::cout << std::endl;
-//			std::cout << "i = " << i << " j = " << j << std::endl;
-//			std::cout <<"p = " << p << std::endl;
-//
-//			//стандартный алгоритм
-//			do {
-//				while (narr[i] < p) i++;
-//				while (narr[j] > p) j--;
-//
-//				if (i <= j) {
-//					std::cout << narr[i] << "<->" << narr[j] << std::endl;
-//					Swap(narr[i], narr[j]);
-//					for (int _i = b; _i <= e; _i++)
-//						std::cout << narr[_i] << " ";
-//					std::cout << std::endl;
-//					i++; j--;
-//				}
-//			} while (i < j);
-//
-//
-//			if (j > b) // если j не достигнула начала
-//			{
-//				iterators.push(b); // i = b
-//				std::cout << "(" << b << " : ";
-//				auto t = e - j; // избыток, чтобы не уйти за границы массива
-//				if (t < 0)
-//				{
-//					iterators.push(j); // j = j
-//					std::cout << j + t << ")";
-//				}
-//				else
-//				{
-//					iterators.push(j);
-//					std::cout << j << ")";
-//				}
-//
-//			}
-//			else // иначе создаю пустой интервалл
-//			{
-//				std::cout << "(" << b << " : ";
-//				std::cout << b - 1 << ")";
-//				iterators.push(b);
-//				iterators.push(b-1);
-//			}
-//
-//			if (e >= i) //если i не достигла конца
-//			{
-//				//возможно прибавлять b это очень лишнее действие
-//				auto t = e - (b + i + 1);
-//				if (t < 0)
-//				{
-//					iterators.push(i +1 + t);
-//					std::cout << "(" << b + i +1 + t << " : ";
-//				}
-//				else
-//				{
-//					iterators.push(b + i +1);
-//					std::cout << "(" << b + i +1 << " : ";
-//				}
-//				iterators.push(e);
-//				std::cout << e << ")\n";
-//			}
-//			else
-//			{
-//				std::cout << "(" << b+i << " : ";
-//				std::cout << b+i - 1 << ")\n";
-//				iterators.push(i);
-//				iterators.push(i-1);
-//			}
-//		}
-//		std::cout << std::endl;
-//	}
-//	return narr;
-//}
-
-//Быстрая сортировка для 1-4 потоков
+////Быстрая сортировка для 1-4 потоков
 //template<class T>
 //void quickSortOneThrd(T* a, long N) {
 //
@@ -369,7 +260,7 @@ void quickSortAsync(T* a, long N) {
 //	if (j > 0) quickSortOneThrd(a, j + 1);
 //	if (N > i) quickSortOneThrd(a + i, N - i);
 //}
-
+//
 //template<class T>
 //void quickSortTwoThrd(T* a, long N) {
 //
@@ -398,6 +289,7 @@ void quickSortAsync(T* a, long N) {
 //		}
 //	}
 //}
+//
 //template<class T>
 //void quickSortFourThrd(T* a, long N) {
 //
@@ -468,7 +360,8 @@ void quickSortAsync(T* a, long N) {
 //		}
 //	}
 //}
-//Быстрая сортировка (main function)
+//
+////Быстрая сортировка (main function)
 //template<class T>
 //void quickSortAsync(T* a, long N) {
 //	switch (omp_get_max_threads())
