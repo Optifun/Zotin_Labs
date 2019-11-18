@@ -286,3 +286,107 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 	}
 	return out;
 }
+
+//Линейный фильтр последовательный; RH, RW - размеры рангов скользящего окна
+void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+	for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			for (int DY = -RH; DY < RH; DY++)
+			{
+				int KY = Y + DY;
+				if (KY < 0)
+					KY = 0;
+				if (KY > height - 1)
+					KY = height - 1;
+				for (int DX = -RW; DX < RW; DX++)
+				{
+					int KX = X + DX;
+					if (KX < 0)
+						KX = 0;
+					if (KX > width - 1)
+						KX = width - 1;
+					rgbBlue += RGB[KY][KX].rgbBlue;
+					rgbGreen += RGB[KY][KX].rgbGreen;
+					rgbRed += RGB[KY][KX].rgbRed;
+				}
+			}
+			RGBresult[Y][X].rgbBlue = rgbBlue / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbGreen = rgbGreen / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbRed = rgbRed / ((RH * 2 + 1) * (RW * 2 + 1));
+		}
+}
+
+//Формирование матрицы коэффициентов для фильтрации Гаусса
+double** GetGaussMatrix(int RH, int RW, int q) {
+	double** Result = new double*[RH * 2 + 1];
+	for (int i = 0; i < RH * 2 + 1; i++)
+		Result[i] = new double[RW * 2 + 1];
+	double SUM = 0;
+	double CF;
+	for (int Y = -RH; Y < RH; Y++)
+		for (int X = -RW; X < RW; X++) {
+			CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
+
+			SUM += CF;
+			Result[Y + RH][X + RW] = CF;
+		}
+	for (int Y = -RH; Y < RH; Y++)
+		for (int X = -RW; X < RW; X++) {
+			Result[Y + RH][X + RW] /= SUM;
+		}
+	return Result;
+}
+//Линейный фильтр Гаусса последовательный; RH, RW - размеры рангов скользящего окна
+void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+	double** CoefMatrix = GetGaussMatrix(RH, RW, 10); //Сигма тут
+	for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			for (int DY = -RH; DY < RH; DY++)
+			{
+				int KY = Y + DY;
+				if (KY < 0)
+					KY = 0;
+				if (KY > height - 1)
+					KY = height - 1;
+				for (int DX = -RW; DX < RW; DX++)
+				{
+					int KX = X + DX;
+					if (KX < 0)
+						KX = 0;
+					if (KX > width - 1)
+						KX = width - 1;
+					rgbBlue += RGB[KY][KX].rgbBlue * CoefMatrix[DY + RH][DX + RW];
+					rgbGreen += RGB[KY][KX].rgbGreen * CoefMatrix[DY + RH][DX + RW];
+					rgbRed += RGB[KY][KX].rgbRed * CoefMatrix[DY + RH][DX + RW];
+				}
+			}
+			RGBresult[Y][X].rgbBlue = rgbBlue;
+			RGBresult[Y][X].rgbGreen = rgbGreen;
+			RGBresult[Y][X].rgbRed = rgbRed;
+		}
+	for (int i = 0; i < RW; i++)
+		delete[] CoefMatrix[i];
+	delete[] CoefMatrix;
+}
+
+//Пример использования
+//int main() {
+//	cout << "Hello World!\n";
+//	RGBQUAD **RGB, **RGBresult;
+//	BITMAPFILEHEADER head;
+//	BITMAPINFOHEADER info;
+//	string str = "1.bmp";
+//	string str2 = "11.bmp";
+//	BMPRead(RGB, head, info, "1.bmp");
+//	RGBresult = new RGBQUAD*[info.biHeight];
+//	for (int i = 0; i < info.biHeight; i++)
+//		RGBresult[i] = new RGBQUAD[info.biWidth];
+//	LineFilteringGauss(RGB, info.biHeight, info.biWidth, 5, 5, RGBresult);
+//	BMPWrite(RGBresult, head, info, str2.c_str());
+//}
