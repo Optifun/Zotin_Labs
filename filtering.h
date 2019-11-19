@@ -287,21 +287,21 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 	return out;
 }
 
-//Линейный фильтр последовательный; RH, RW - размеры рангов скользящего окна
+//Линейный средний фильтр последовательный; RH, RW - размеры рангов скользящего окна
 void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
 		{
 			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
-			for (int DY = -RH; DY < RH; DY++)
+			for (int DY = -RH; DY <= RH; DY++)
 			{
 				int KY = Y + DY;
 				if (KY < 0)
 					KY = 0;
 				if (KY > height - 1)
 					KY = height - 1;
-				for (int DX = -RW; DX < RW; DX++)
+				for (int DX = -RW; DX <= RW; DX++)
 				{
 					int KX = X + DX;
 					if (KX < 0)
@@ -320,52 +320,56 @@ void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RG
 }
 
 //Формирование матрицы коэффициентов для фильтрации Гаусса
-double** GetGaussMatrix(int RH, int RW, int q) {
+double** GetGaussMatrix(int RH, int RW, double q) {
 	double** Result = new double*[RH * 2 + 1];
 	for (int i = 0; i < RH * 2 + 1; i++)
 		Result[i] = new double[RW * 2 + 1];
 	double SUM = 0;
-	double CF;
-	for (int Y = -RH; Y < RH; Y++)
-		for (int X = -RW; X < RW; X++) {
-			CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
-
-			SUM += CF;
+	for (int Y = -RH; Y <= RH; Y++)
+		for (int X = -RW; X <= RW; X++) {
+			double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
 			Result[Y + RH][X + RW] = CF;
+			SUM += CF;			
 		}
-	for (int Y = -RH; Y < RH; Y++)
-		for (int X = -RW; X < RW; X++) {
+	for (int Y = -RH; Y <= RH; Y++)
+		for (int X = -RW; X <= RW; X++)
 			Result[Y + RH][X + RW] /= SUM;
-		}
 	return Result;
 }
 //Линейный фильтр Гаусса последовательный; RH, RW - размеры рангов скользящего окна
 void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
-	double** CoefMatrix = GetGaussMatrix(RH, RW, 10); //Сигма тут
+	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
 		{
-			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
-			for (int DY = -RH; DY < RH; DY++)
+			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			for (int DY = -RH; DY <= RH; DY++)
 			{
 				int KY = Y + DY;
 				if (KY < 0)
 					KY = 0;
 				if (KY > height - 1)
 					KY = height - 1;
-				for (int DX = -RW; DX < RW; DX++)
+				for (int DX = -RW; DX <= RW; DX++)
 				{
 					int KX = X + DX;
 					if (KX < 0)
 						KX = 0;
 					if (KX > width - 1)
 						KX = width - 1;
-					rgbBlue += RGB[KY][KX].rgbBlue * CoefMatrix[DY + RH][DX + RW];
-					rgbGreen += RGB[KY][KX].rgbGreen * CoefMatrix[DY + RH][DX + RW];
-					rgbRed += RGB[KY][KX].rgbRed * CoefMatrix[DY + RH][DX + RW];
+					double tmp = CoefMatrix[DY + RH][DX + RW];
+					rgbBlue += RGB[KY][KX].rgbBlue * tmp;
+					rgbGreen += RGB[KY][KX].rgbGreen * tmp;
+					rgbRed += RGB[KY][KX].rgbRed * tmp;
 				}
 			}
+			if (rgbBlue < 0)	rgbBlue = 0;
+			if (rgbBlue > 255)	rgbBlue = 255;
+			if (rgbGreen < 0)	rgbGreen = 0;
+			if (rgbGreen > 255)	rgbGreen = 255;
+			if (rgbRed < 0)		rgbRed = 0;
+			if (rgbRed > 255)	rgbRed = 255;
 			RGBresult[Y][X].rgbBlue = rgbBlue;
 			RGBresult[Y][X].rgbGreen = rgbGreen;
 			RGBresult[Y][X].rgbRed = rgbRed;
@@ -390,3 +394,102 @@ void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, R
 //	LineFilteringGauss(RGB, info.biHeight, info.biWidth, 5, 5, RGBresult);
 //	BMPWrite(RGBresult, head, info, str2.c_str());
 //}
+
+//Линейный средний фильтр параллельный; RH, RW - размеры рангов скользящего окна
+void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+#pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
+	for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+
+			for (int DY = -RH; DY < RH; DY++)			{
+				int KY = Y + DY;
+				if (KY < 0)
+					KY = 0;
+				if (KY > height - 1)
+					KY = height - 1;
+
+				for (int DX = -RW; DX < RW; DX++)
+				{
+					int KX = X + DX;
+					if (KX < 0)
+						KX = 0;
+					if (KX > width - 1)
+						KX = width - 1;
+					rgbBlue += RGB[KY][KX].rgbBlue;
+					rgbGreen += RGB[KY][KX].rgbGreen;
+					rgbRed += RGB[KY][KX].rgbRed;
+				}
+			}
+			RGBresult[Y][X].rgbBlue = rgbBlue / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbGreen = rgbGreen / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbRed = rgbRed / ((RH * 2 + 1) * (RW * 2 + 1));
+		}
+}
+
+//Формирование матрицы коэффициентов для фильтрации Гаусса параллельное
+double** GetGaussMatrixParal(int RH, int RW, double q) {
+	double** Result = new double*[RH * 2 + 1];
+	for (int i = 0; i < RH * 2 + 1; i++)
+		Result[i] = new double[RW * 2 + 1];
+	double SUM = 0;
+#pragma omp parallel for reduction(+:SUM) firstprivate(RH, RW, q) shared(Result) schedule(static, RH)
+	for (int Y = -RH; Y <= RH; Y++)
+		for (int X = -RW; X <= RW; X++) {
+			double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
+			Result[Y + RH][X + RW] = CF;
+			SUM += CF;
+		}
+#pragma omp parallel for firstprivate(RH, RW, q, SUM) shared(Result) schedule(static, RH)
+	for (int Y = -RH; Y <= RH; Y++)
+		for (int X = -RW; X <= RW; X++) {
+			Result[Y + RH][X + RW] /= SUM;
+		}
+	return Result;
+}
+//Линейный фильтр Гаусса параллельеный; RH, RW - размеры рангов скользящего окна
+void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+	double** CoefMatrix = GetGaussMatrixParal(RH, RW, RW / 3.0); //Сигма тут
+#pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
+	for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			for (int DY = -RH; DY <= RH; DY++)
+			{
+				int KY = Y + DY;
+				if (KY < 0)
+					KY = 0;
+				if (KY > height - 1)
+					KY = height - 1;
+				for (int DX = -RW; DX <= RW; DX++)
+				{
+					int KX = X + DX;
+					if (KX < 0)
+						KX = 0;
+					if (KX > width - 1)
+						KX = width - 1;
+					double tmp;
+					tmp = CoefMatrix[DY + RH][DX + RW];					
+					rgbBlue += RGB[KY][KX].rgbBlue * tmp;
+					rgbGreen += RGB[KY][KX].rgbGreen * tmp;
+					rgbRed += RGB[KY][KX].rgbRed * tmp;
+				}
+			}
+			if (rgbBlue < 0)	rgbBlue = 0;
+			if (rgbBlue > 255)	rgbBlue = 255;
+			if (rgbGreen < 0)	rgbGreen = 0;
+			if (rgbGreen > 255)	rgbGreen = 255;
+			if (rgbRed < 0)		rgbRed = 0;
+			if (rgbRed > 255)	rgbRed = 255;
+			RGBresult[Y][X].rgbBlue = rgbBlue;
+			RGBresult[Y][X].rgbGreen = rgbGreen;
+			RGBresult[Y][X].rgbRed = rgbRed;
+		}
+	for (int i = 0; i < RW; i++)
+		delete[] CoefMatrix[i];
+	delete[] CoefMatrix;
+}
