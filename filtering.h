@@ -117,13 +117,14 @@ RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	BYTE *red1;
 	BYTE *blue1;
 	BYTE *green1;
+	#pragma omp parallel for shared(arr, red, blue, green)
 	for (int i = 0; i < length; i++)
 	{
 		red[i] = arr[i].rgbRed;
 		blue[i] = arr[i].rgbBlue;
 		green[i] = arr[i].rgbGreen;
 	}
-#pragma omp parallel sections shared(red, blue, green, length) lastprivate(red1, blue1, green1)
+#pragma omp parallel sections shared(red, blue, green, length, red1, blue1, green1)
 	{
 #pragma omp section
 		{
@@ -172,7 +173,7 @@ RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMet
 }
 
 //медиальная фильтрация c распараллеливанием сортировки по компонентам
-RGBQUAD** medialFilteringAsyncSort(Bitmap image, int wHeight, int wWidth, ByteSortingMethod method)
+RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
 	RGBQUAD *temp1, *temp2;
@@ -228,7 +229,7 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 	for (int y = 0; y < image.height; y++)
 	{
 		out[y] = new RGBQUAD[image.width];
-		#pragma omp parallel sections private(temp1,temp2, y) shared(image, out)
+		#pragma omp parallel sections private(temp1,temp2) shared(image, out)
 		{
 			#pragma omp section
 			{
