@@ -404,15 +404,14 @@ void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int R
 		for (int X = 0; X < width; X++)
 		{
 			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
-
-			for (int DY = -RH; DY < RH; DY++)			{
+			for (int DY = -RH; DY <= RH; DY++)
+			{
 				int KY = Y + DY;
 				if (KY < 0)
 					KY = 0;
 				if (KY > height - 1)
 					KY = height - 1;
-
-				for (int DX = -RW; DX < RW; DX++)
+				for (int DX = -RW; DX <= RW; DX++)
 				{
 					int KX = X + DX;
 					if (KX < 0)
@@ -453,7 +452,7 @@ double** GetGaussMatrixParal(int RH, int RW, double q) {
 //Линейный фильтр Гаусса параллельеный; RH, RW - размеры рангов скользящего окна
 void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
-	double** CoefMatrix = GetGaussMatrixParal(RH, RW, RW / 3.0); //Сигма тут
+	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
 #pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
@@ -473,8 +472,7 @@ void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int 
 						KX = 0;
 					if (KX > width - 1)
 						KX = width - 1;
-					double tmp;
-					tmp = CoefMatrix[DY + RH][DX + RW];					
+					double tmp = CoefMatrix[DY + RH][DX + RW];
 					rgbBlue += RGB[KY][KX].rgbBlue * tmp;
 					rgbGreen += RGB[KY][KX].rgbGreen * tmp;
 					rgbRed += RGB[KY][KX].rgbRed * tmp;
@@ -494,3 +492,4 @@ void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int 
 		delete[] CoefMatrix[i];
 	delete[] CoefMatrix;
 }
+
