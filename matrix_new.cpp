@@ -31,7 +31,23 @@ private:
 	fillF generator;
 };
 
-enum Method {Sequence, ParallelFor, ParallelSections, Cilk_for, Cilk_spawn, Cilk_index, Cilk_for_index};
+// Метод параллелизации алгоритма
+enum Method {
+	//Последовательный вариант
+	Sequence,
+	//Параллельный цикл на ОМП
+	ParallelFor,
+	//Параллельные секции на ОМП
+	ParallelSections,
+	//Параллельный цикл на Силке
+	Cilk_for,
+	//Спавн параллельных веток на Силке
+	Cilk_spawn,
+	//Индексная нотация(векторизация) на Силке
+	Cilk_index,
+	//Параллельный цикл + векторизация на Силке
+	Cilk_for_index};
+
 //Класс матрицы
 template<class Type>
 class Matrix
@@ -330,7 +346,7 @@ public:
 private:
 //Сложение элементов матрицы
 #pragma region Summation
-
+	// Последовательное сложение элементов матрицы
 	Type SumSeq()
 	{
 		Type S = 0;
@@ -340,6 +356,7 @@ private:
 		return S;
 	}
 
+	// Сложение элементов с параллельным циклом
 	Type SumOmpFor()
 	{
 		Type S = 0;
@@ -350,6 +367,7 @@ private:
 		return S;
 	}
 
+	// Сложение элементов с параллельными секциями
 	Type SumOmpSec(int _threads)
 	{
 		Type S = 0;
@@ -391,9 +409,10 @@ private:
 		}
 		return S;
 	}
-
+	// Сложение элементов с параллельным циклом на Силке
 	Type SumCilkFor()
 	{
+		//редуктор на сложение равный нулю
 		cilk::reducer_opadd<Type> S(0);
 		cilk_for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
@@ -401,31 +420,36 @@ private:
 		return S.get_value();
 	}
 
+	// Сложение элементов с векторизацией
 	Type SumCilkVec()
 	{
 		Type S;
+		// прохожусь по i = 0:n, по j = 0:m, применяю редукцию на сложение
 		S = __sec_reduce_add(arr[0:n][0:m]);
 		return S;
 	}
 
+	// Сложение элементов со спавном параллельных веток
 	Type SumCilkSpawn()
 	{
+		//редуктор на сложение равный нулю
 		cilk::reducer_opadd<Type> S(0);
 		for (long i = 0; i < n; i++)
 		{
+			//Спав новой ветки
 			cilk_spawn [&S, i, this]() {
 				for (long j = 0; j < m; j++)
 					S += arr[i][j];
 			}();
 		}
-		cilk_sync;
+		cilk_sync; //синхронизирую ветки здесь
 		return S.get_value();
 	}
-
+	// Сложение элементов с параллельным циклом и векторизацией
 	Type SumCilkForVec()
 	{
 		cilk::reducer_opadd<Type> S(0);
-		for (long i = 0; i < n; i++)
+		cilk_for (long i = 0; i < n; i++)
 			S += __sec_reduce_add(arr[i][0:m]);
 		return S.get_value();
 	}
@@ -433,6 +457,7 @@ private:
 
 // Сложение двух матриц
 #pragma region Addition
+
 	//Обычное сложение матриц
 	Matrix<Type> AddSeq (Matrix<Type> &_m)
 	{
@@ -444,7 +469,7 @@ private:
 				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
 		return res;
 	}
-
+	// Сложение двух матриц с параллельным циклом
 	Matrix<Type> AddOmpFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)	
@@ -457,6 +482,7 @@ private:
 		return res;
 	}
 
+	//Сложение двух матриц с параллельными секциями
 	Matrix<Type> AddOmpSec(Matrix<Type> &_m, int _threads)
 	{
 		if (m != _m.m || n != _m.n)
@@ -501,6 +527,7 @@ private:
 		return res;
 	}
 
+	// Сложение двух матриц с параллельным циклом на Силке
 	Matrix<Type> AddCilkFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
@@ -512,6 +539,7 @@ private:
 		return res;
 	}
 
+	// Сложение двух матриц со спавном веток
 	Matrix<Type> AddCilkSpawn(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
@@ -527,6 +555,7 @@ private:
 		return res;
 	}
 
+	// Сложение двух матриц с векторизацией
 	Matrix<Type> AddCilkVec(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
@@ -536,6 +565,7 @@ private:
 		return res;
 	}
 
+	// Сложение двух матриц с параллельным циклом и векторизацией
 	Matrix<Type> AddCilkForVec(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
@@ -550,9 +580,10 @@ private:
 
 // Перемножение элементов матрицы
 #pragma region Multiplication
+
+	// Последовательное перемножение матриц
 	Type MulSeq()
 	{
-		//cilk::reducer<cilk::op_mul<Type>> Prod(1);
 		Type Prod = 1;
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
@@ -560,6 +591,7 @@ private:
 		return Prod;
 	}
 
+	// Перемножение матриц с параллельным циклом
 	Type MulOmpFor()
 	{
 		Type Prod = 1;
@@ -570,6 +602,7 @@ private:
 		return Prod;
 	}
 
+	// Перемножение матриц с параллельными секциями
 	Type MulOmpSec(int _threads)
 	{
 		Type Prod = 1;
@@ -616,6 +649,7 @@ private:
 		return Prod;
 	}
 
+	// Перемножение матриц с параллельным циклом на Силке
 	Type MulCilkFor()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
@@ -626,6 +660,7 @@ private:
 		return Prod.get_value();
 	}
 
+	// Перемножение матриц со спавном новых веток
 	Type MulCilkSpawn()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
@@ -634,9 +669,11 @@ private:
 				for (long j = 0; j < m; j++)
 					*Prod *= arr[i][j];
 			}();
+		cilk_sync;
 		return Prod.get_value();
 	}
 
+	// Перемножение матриц с векторизацией
 	Type MulCilkVec()
 	{
 		Type Prod = 1;
@@ -644,6 +681,7 @@ private:
 		return Prod;
 	}
 
+	// Перемножение матриц с параллельным циклом и векторизацией
 	Type MulCilkForVec()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
@@ -656,6 +694,7 @@ private:
 // Поиск максимального элемента двух матриц
 #pragma region Maximum
 
+	// Нахождение максимального элемента двух матриц
 	Type MaxSeq(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
@@ -670,6 +709,7 @@ private:
 		return MaxOf(m1, m2);
 	}
 
+	// Нахождение максимального элемента двух матриц с параллельным циклом
 	Type MaxOmpFor(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
@@ -685,6 +725,7 @@ private:
 		return MaxOf(m1, m2);
 	}
 
+	// Нахождение максимального элемента двух матриц с параллельными секциями
 	Type MaxOmpSec(Matrix<Type> &M, int _threads)
 	{
 		if (m != M.m || n != M.n)
@@ -747,6 +788,7 @@ private:
 		return MaxOf(m1, m2);
 	}
 
+	// Нахождение максимального элемента двух матриц с параллельным циклом на силке
 	Type MaxCilkFor(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
@@ -764,6 +806,7 @@ private:
 		return MaxOf(m1.get_value(), m2.get_value());
 	}
 
+	// Нахождение максимального элемента двух матриц со спавном веток
 	Type MaxCilkSpawn(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
@@ -778,9 +821,11 @@ private:
 					m2->calc_max(M.arr[i][j]);
 				}
 			}();
+		cilk_sync;
 		return MaxOf(m1.get_value(), m2.get_value());
 	}
 	
+	// Нахождение максимального элемента двух матриц с векторизацией
 	Type MaxCilkVec(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
@@ -794,6 +839,7 @@ private:
 		return MaxOf(m1, m2);
 	}
 	
+	// Нахождение максимального элемента двух матриц с параллельным циклом и векторизацией
 	Type MaxCilkForVec(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
