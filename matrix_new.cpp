@@ -14,6 +14,14 @@ using namespace std;
 typedef double(*fillF)(long, long);
 #define MaxOf(a, b) ((a)< (b)) ? (b) : (a)
 
+static string doubleToString(double number)
+{
+	char buf[256];
+	int size = sprintf_s(buf, "%f", number);
+	string num = string(buf, size);
+	return num;
+}
+
 template<class T>
 class Filler
 {
