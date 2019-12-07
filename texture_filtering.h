@@ -1,6 +1,8 @@
 #pragma once
 #include"filtering.h"
 #include<list>
+#include<string>
+using namespace std;
 
 float* formHist(Bitmap &image, BYTE** BrMap, int x, int y, int RH, int RW)
 {
@@ -60,7 +62,7 @@ void getMetrics(float &m2, float &u, float &r, float &e, float* &hist)
 //¬ыход:
 //ћоменты второго пор€дка, однородность, относительна€ гладкость, ентропи€
 //Moments, Uniform, Relative, Enthropy
-void textureFilter(Bitmap &image, int rh, int rw, float **M, float **U, float **R, float **E)
+void textureFilter(Bitmap &image, int rh, int rw, float **&M, float **&U, float **&R, float **&E)
 {
 	M = new float*[image.height];
 	U = new float*[image.height];
@@ -89,7 +91,26 @@ void textureFilter(Bitmap &image, int rh, int rw, float **M, float **U, float **
 		}
 }
 
-void formImage(float** T, int Height, int Width, string fname, float _min, float t1, float t2, float _max)
+void formImage(BITMAPFILEHEADER head, BITMAPINFOHEADER info, float** T, int Height, int Width, string fname, float t1, float t2, float _min = 0, float _max = 8000)
 {
+	RGBQUAD** out = new RGBQUAD*[Height];
+	for (int y = 0; y < Height; y++)
+	{
+		out[y] = new RGBQUAD[Width]();
+		for (int x = 0; x < Width; x++)
+		{
+			if (T[y][x] > t2)
+				out[y][x].rgbGreen = 255;
 
+			if (T[y][x] < t2 && T[y][x] > t1)
+			{
+				out[y][x].rgbRed = 255;
+				out[y][x].rgbGreen = 255;
+			}
+
+			if (T[y][x] < t1)
+				out[y][x].rgbRed = 255;
+		}
+	}
+	BMPWrite(out, head, info, fname.c_str());
 }
