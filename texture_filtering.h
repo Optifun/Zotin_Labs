@@ -4,7 +4,8 @@
 #include<string>
 using namespace std;
 
-float* formHist(Bitmap &image, BYTE** BrMap, int x, int y, int RH, int RW)
+// Формирует гистограмму на основе карты яркости в рамке с радиусами RH, RW на позиции (x,y)
+float* formHist(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
 {
 	int index = 0;
 	int coordX;
@@ -21,14 +22,15 @@ float* formHist(Bitmap &image, BYTE** BrMap, int x, int y, int RH, int RW)
 			if (coordX < 0)
 				coordX = 0;
 
-			if (coordX >= image.width)
-				coordX = image.width - 1;
+			if (coordX >= width)
+				coordX = width - 1;
 
 			if (coordY < 0)
 				coordY = 0;
 
-			if (coordY >= image.height)
-				coordY = image.height - 1;
+			if (coordY >= height)
+				coordY = height - 1;
+			//инкрементирует элемент гистограммы, соответствующий яркости текущего пикселя
 			hist[BrMap[coordY][coordX]] += 1;
 
 		}
@@ -81,16 +83,23 @@ void textureFilter(Bitmap &image, int rh, int rw, float **&M, float **&U, float 
 
 	for (int y = 0; y < image.height; y++)
 		for (int x = 0; x < image.width; x++)
+			//перевожу цветную картинку в карут яркости
 			Brightness[y][x] = image.map[y][x].rgbRed*0.299 + image.map[y][x].rgbGreen*0.587 + image.map[y][x].rgbBlue*0.114;
 	for (int y = 0; y < image.height; y++)
 		for (int x = 0; x < image.width; x++)
 		{
-			hist = formHist(image, Brightness, x, y, rh, rw);
+			//получаю гистограмму для окна
+			hist = formHist(Brightness, image.height, image.width, x, y, rh, rw);
+			//получаю метрики для текущего положения окна
 			getMetrics(M[y][x], U[y][x], R[y][x], E[y][x], hist);
 			delete[] hist;
 		}
+	//возвращаю метрики наверх
 }
 
+//Формирует изображение по массиву метрик T[,]
+//fname - имя выходного файла
+//min<t1<t2<max - пороговые значения
 void formImage(BITMAPFILEHEADER head, BITMAPINFOHEADER info, float** T, int Height, int Width, string fname, float t1, float t2, float _min = 0, float _max = 8000)
 {
 	RGBQUAD** out = new RGBQUAD*[Height];
@@ -99,18 +108,22 @@ void formImage(BITMAPFILEHEADER head, BITMAPINFOHEADER info, float** T, int Heig
 		out[y] = new RGBQUAD[Width]();
 		for (int x = 0; x < Width; x++)
 		{
-			if (T[y][x] > t2)
+			//Если в первом диапазоне, то крашу в зеленый
+			if (T[y][x] > t2 && T[y][x] < _max)
 				out[y][x].rgbGreen = 255;
 
-			if (T[y][x] < t2 && T[y][x] > t1)
+			//Если во втором диапазоне, то крашу в желтый
+			if (T[y][x] > t1 &&T[y][x] < t2)
 			{
 				out[y][x].rgbRed = 255;
 				out[y][x].rgbGreen = 255;
 			}
 
-			if (T[y][x] < t1)
+			//Если в первом диапазоне, то крашу в красный
+			if (T[y][x] > _min && T[y][x] < t1)
 				out[y][x].rgbRed = 255;
 		}
 	}
+	//Сохраняю в файл
 	BMPWrite(out, head, info, fname.c_str());
 }
