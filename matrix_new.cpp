@@ -723,7 +723,7 @@ private:
 		if (m != M.m || n != M.n)
 			throw new exception("ћатрицы разной размерности");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
-		#pragma omp parallel for shared(m1, m2, arr, M)
+		#pragma omp parallel for reduction(max:m1, m2) shared(arr, M)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 			{
@@ -942,9 +942,10 @@ private:
 		if (m != _m.m || n != _m.n)
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		cilk_for(long i = 0; i < n; i++)
+		cilk_for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 				res.arr[i][j] = arr[i][j] - _m.arr[i][j];
+		cilk_sync;
 		return res;
 	}
 
@@ -979,6 +980,7 @@ private:
 		Matrix<Type> res = Matrix<Type>(n, m);
 		cilk_for(long i = 0; i < n; i++)
 			res.arr[i][0:m] = arr[i][0:m] + _m.arr[i][0:m];
+		cilk_sync;
 		return res;
 	}
 
@@ -1049,8 +1051,10 @@ template<class Type>
 Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 {
 	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
+	//__cilkrts_end_cilk();
 	__cilkrts_init();
+	int t = __cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
+	//cout << t << " = " << __cilkrts_get_nworkers();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1139,8 +1143,7 @@ template<class Type>
 Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 {
 	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
+	int t = __cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
 	switch (m)
 	{
 	case Method::Sequence:
