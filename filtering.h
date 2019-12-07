@@ -1,8 +1,14 @@
 #pragma once
 #include<omp.h>
 #include"BMPFileRW.h"
+#include<cilk/cilk.h>
+#include<cilk/cilk_api.h>
+#include<cilk/reducer_opadd.h>
+#include<cilk/reducer_max.h>
+#include<cilk/reducer_opmul.h>
 #include"sorting.h"
 
+using namespace std;
 //—игнатура метода сортирующего байты
 typedef BYTE*(*ByteSortingMethod)(BYTE* arr, long length, IntComparer compare);
 
@@ -71,7 +77,37 @@ RGBQUAD* getMedial(Bitmap &image, int x, int y, int rh, int rw)
 				coordY = image.height - 1;
 			barray[index] = image.map[coordY][coordX];
 			index++;
+		}
+	}
+	return barray;
+}
 
+//заполнение медиального массива
+RGBQUAD* getMedialCilkFor(Bitmap &image, int x, int y, int rh, int rw)
+{
+	int index = 0;
+	RGBQUAD* barray = new RGBQUAD[rw * rh];
+	int coordX;
+	int coordY;
+	cilk_for (int dy = -rh / 2; dy < rh / 2 + rh % 2; dy++)
+	{
+		coordY = y + dy;
+		for (int dx = -rw / 2; dx < rw / 2 + rw % 2; dx++)
+		{
+			coordX = x + dx;
+			if (coordX < 0)
+				coordX = 0;
+
+			if (coordX >= image.width)
+				coordX = image.width - 1;
+
+			if (coordY < 0)
+				coordY = 0;
+
+			if (coordY >= image.height)
+				coordY = image.height - 1;
+			barray[index] = image.map[coordY][coordX];
+			index++;
 		}
 	}
 	return barray;
@@ -102,6 +138,39 @@ RGBQUAD* sortRGB(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	RGBQUAD* narr = new RGBQUAD[length];
 	for (int i = 0; i < length; i++)
 		narr[i] = {blue1[i], green1[i],red1[i],  0};
+	delete[] red1;
+	delete[] green1;
+	delete[] blue1;
+	return narr;
+}
+
+//—ортировка массива –√Ѕ
+RGBQUAD* sortRGBVec(RGBQUAD* arr, long length, ByteSortingMethod sort)
+{
+	BYTE *red = new BYTE[length];
+	BYTE *blue = new BYTE[length];
+	BYTE *green = new BYTE[length];
+	BYTE *red1;
+	BYTE *blue1;
+	BYTE *green1;
+	red[0:length] = arr[0:length].rgbRed;
+	blue[0:length] = arr[0:length].rgbBlue;
+	green[0:length] = arr[0:length].rgbGreen;
+
+	cilk_spawn[&red, length, &red1, sort]() {
+	red1 = sort(red, length, AscInt);
+	}();
+	cilk_spawn[&blue, length, &blue1, sort]() {
+		blue1 = sort(blue, length, AscInt);
+	}();
+	green1 = sort(green, length, AscInt);
+	RGBQUAD* narr = new RGBQUAD[length];
+	cilk_sync;
+	for (int i = 0; i < length; i++)
+		narr[i] = { blue1[i], green1[i], red1[i], 0 };
+	delete[] red;
+	delete[] blue;
+	delete[] green;
 	delete[] red1;
 	delete[] green1;
 	delete[] blue1;
@@ -207,6 +276,27 @@ RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSorti
 			//в окне H x W ложу пиксели в массив temp
 			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполн€ю медиальный массив
 			temp2 = sortRGB(temp1, wHeight * wWidth, method);
+			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			delete[] temp1;
+			delete[] temp2;
+		}
+	}
+	return out;
+}
+
+//медиальна€ фильтраци€ for
+RGBQUAD** medialFilteringSilkFor(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+{
+	RGBQUAD **out = new RGBQUAD*[image.height]; // на выходе картинка с примененным фильтром
+	RGBQUAD *temp1, *temp2;
+	cilk_for (int y = 0; y < image.height; y++)
+	{
+		out[y] = new RGBQUAD[image.width];
+		for (int x = 0; x < image.width; x++)
+		{
+			//в окне H x W ложу пиксели в массив temp
+			temp1 = getMedialCilkFor(image, x, y, wHeight, wWidth); //заполн€ю медиальный массив
+			temp2 = sortRGBVec(temp1, wHeight * wWidth, method);
 			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
