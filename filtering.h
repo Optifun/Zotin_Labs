@@ -1,12 +1,12 @@
-#pragma once
+п»ї#pragma once
 #include<omp.h>
 #include"BMPFileRW.h"
 #include"sorting.h"
 
-//Сигнатура метода сортирующего байты
+//РЎРёРіРЅР°С‚СѓСЂР° РјРµС‚РѕРґР° СЃРѕСЂС‚РёСЂСѓСЋС‰РµРіРѕ Р±Р°Р№С‚С‹
 typedef BYTE*(*ByteSortingMethod)(BYTE* arr, long length, IntComparer compare);
 
-//Класс битмап изображения, хранящий поле пикселей ширину и высоту
+//РљР»Р°СЃСЃ Р±РёС‚РјР°Рї РёР·РѕР±СЂР°Р¶РµРЅРёСЏ, С…СЂР°РЅСЏС‰РёР№ РїРѕР»Рµ РїРёРєСЃРµР»РµР№ С€РёСЂРёРЅСѓ Рё РІС‹СЃРѕС‚Сѓ
 class Bitmap
 {
 public:
@@ -44,7 +44,7 @@ public:
 	RGBQUAD **map;
 };
 
-//заполнение медиального массива
+//Р·Р°РїРѕР»РЅРµРЅРёРµ РјРµРґРёР°Р»СЊРЅРѕРіРѕ РјР°СЃСЃРёРІР°
 RGBQUAD* getMedial(Bitmap &image, int x, int y, int rh, int rw)
 {
 	int index = 0;
@@ -76,7 +76,7 @@ RGBQUAD* getMedial(Bitmap &image, int x, int y, int rh, int rw)
 	return barray;
 }
 
-//Сортировка массива РГБ
+//РЎРѕСЂС‚РёСЂРѕРІРєР° РјР°СЃСЃРёРІР° Р Р“Р‘
 RGBQUAD* sortRGB(RGBQUAD* arr, long length, ByteSortingMethod sort)
 {
 	BYTE *red = new BYTE[length];
@@ -107,7 +107,7 @@ RGBQUAD* sortRGB(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	return narr;
 }
 
-//Параллельная сортировка массива РГБ
+//РџР°СЂР°Р»Р»РµР»СЊРЅР°СЏ СЃРѕСЂС‚РёСЂРѕРІРєР° РјР°СЃСЃРёРІР° Р Р“Р‘
 RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 {
 	BYTE *red = new BYTE[length];
@@ -150,7 +150,7 @@ RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	return narr;
 }
 
-//медиальная фильтрация
+//РјРµРґРёР°Р»СЊРЅР°СЏ С„РёР»СЊС‚СЂР°С†РёСЏ
 RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
@@ -160,10 +160,10 @@ RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMet
 		out[y] = new RGBQUAD[image.width];
 		for (int x = 0; x < image.width; x++)
 		{
-			//в окне H x W ложу пиксели в массив temp
-			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGB(temp1, wHeight * wWidth, method); // сортирую каждую из компонент
-			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+			temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
+			temp2 = sortRGB(temp1, wHeight * wWidth, method); // СЃРѕСЂС‚РёСЂСѓСЋ РєР°Р¶РґСѓСЋ РёР· РєРѕРјРїРѕРЅРµРЅС‚
+			out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -171,7 +171,7 @@ RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMet
 	return out;
 }
 
-//медиальная фильтрация c распараллеливанием сортировки по компонентам
+//РјРµРґРёР°Р»СЊРЅР°СЏ С„РёР»СЊС‚СЂР°С†РёСЏ c СЂР°СЃРїР°СЂР°Р»Р»РµР»РёРІР°РЅРёРµРј СЃРѕСЂС‚РёСЂРѕРІРєРё РїРѕ РєРѕРјРїРѕРЅРµРЅС‚Р°Рј
 RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
@@ -181,10 +181,10 @@ RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteS
 		out[y] = new RGBQUAD[image.width];
 		for (int x = 0; x < image.width; x++)
 		{
-			//в окне H x W ложу пиксели в массив temp
-			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+			//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+			temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
 			temp2 = sortRGBAsync(temp1, wHeight * wWidth, method);
-			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -192,10 +192,10 @@ RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteS
 	return out;
 }
 
-//медиальная фильтрация for
+//РјРµРґРёР°Р»СЊРЅР°СЏ С„РёР»СЊС‚СЂР°С†РёСЏ for
 RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
-	RGBQUAD **out = new RGBQUAD*[image.height]; // на выходе картинка с примененным фильтром
+	RGBQUAD **out = new RGBQUAD*[image.height]; // РЅР° РІС‹С…РѕРґРµ РєР°СЂС‚РёРЅРєР° СЃ РїСЂРёРјРµРЅРµРЅРЅС‹Рј С„РёР»СЊС‚СЂРѕРј
 	RGBQUAD *temp1, *temp2;
 	#pragma omp parallel for private(temp1, temp2) shared(image, out) schedule(static, wHeight)
 	for (int y = 0; y < image.height; y++)
@@ -203,10 +203,10 @@ RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSorti
 		out[y] = new RGBQUAD[image.width];
 		for (int x = 0; x < image.width; x++)
 		{
-			//в окне H x W ложу пиксели в массив temp
-			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+			//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+			temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
 			temp2 = sortRGB(temp1, wHeight * wWidth, method);
-			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -214,7 +214,7 @@ RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSorti
 	return out;
 }
 
-//медиальная фильтрация sections
+//РјРµРґРёР°Р»СЊРЅР°СЏ С„РёР»СЊС‚СЂР°С†РёСЏ sections
 RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method, int sections)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
@@ -234,10 +234,10 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 			{
 				for (int x = t1; x < t2; x++)
 				{
-					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+					temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
-					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+					out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 					delete[] temp1;
 					delete[] temp2;
 				}
@@ -247,10 +247,10 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				if (sections>=2)
 				for (int x = t2; x < t3; x++)
 				{
-					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+					temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
-					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+					out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 					delete[] temp1;
 					delete[] temp2;
 				}
@@ -260,10 +260,10 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				if (sections>=3)
 				for (int x = t3; x < t4; x++)
 				{
-					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+					temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
-					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+					out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 					delete[] temp1;
 					delete[] temp2;
 				}
@@ -273,10 +273,10 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				if (sections>=4)
 				for (int x = t4; x < t4+step; x++)
 				{
-					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					//РІ РѕРєРЅРµ H x W Р»РѕР¶Сѓ РїРёРєСЃРµР»Рё РІ РјР°СЃСЃРёРІ temp
+					temp1 = getMedial(image, x, y, wHeight, wWidth); //Р·Р°РїРѕР»РЅСЏСЋ РјРµРґРёР°Р»СЊРЅС‹Р№ РјР°СЃСЃРёРІ
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
-					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+					out[y][x] = temp2[wHeight * wWidth / 2]; // РІС‹С‚Р°СЃРєРёРІР°СЋ СЃСЂРµРґРёРЅРЅС‹Р№ СЌР»РµРјРµРЅС‚
 					delete[] temp1;
 					delete[] temp2;
 				}
@@ -287,7 +287,7 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 	return out;
 }
 
-//Линейный средний фильтр последовательный; RH, RW - размеры рангов скользящего окна
+//Р›РёРЅРµР№РЅС‹Р№ СЃСЂРµРґРЅРёР№ С„РёР»СЊС‚СЂ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹Р№; RH, RW - СЂР°Р·РјРµСЂС‹ СЂР°РЅРіРѕРІ СЃРєРѕР»СЊР·СЏС‰РµРіРѕ РѕРєРЅР°
 void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
 	for (int Y = 0; Y < height; Y++)
@@ -319,7 +319,7 @@ void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RG
 		}
 }
 
-//Формирование матрицы коэффициентов для фильтрации Гаусса
+//Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РјР°С‚СЂРёС†С‹ РєРѕСЌС„С„РёС†РёРµРЅС‚РѕРІ РґР»СЏ С„РёР»СЊС‚СЂР°С†РёРё Р“Р°СѓСЃСЃР°
 double** GetGaussMatrix(int RH, int RW, double q) {
 	double** Result = new double*[RH * 2 + 1];
 	for (int i = 0; i < RH * 2 + 1; i++)
@@ -336,10 +336,10 @@ double** GetGaussMatrix(int RH, int RW, double q) {
 			Result[Y + RH][X + RW] /= SUM;
 	return Result;
 }
-//Линейный фильтр Гаусса последовательный; RH, RW - размеры рангов скользящего окна
+//Р›РёРЅРµР№РЅС‹Р№ С„РёР»СЊС‚СЂ Р“Р°СѓСЃСЃР° РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹Р№; RH, RW - СЂР°Р·РјРµСЂС‹ СЂР°РЅРіРѕРІ СЃРєРѕР»СЊР·СЏС‰РµРіРѕ РѕРєРЅР°
 void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
-	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
+	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //РЎРёРіРјР° С‚СѓС‚
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
 		{
@@ -379,7 +379,7 @@ void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, R
 	delete[] CoefMatrix;
 }
 
-//Пример использования
+//РџСЂРёРјРµСЂ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ
 //int main() {
 //	cout << "Hello World!\n";
 //	RGBQUAD **RGB, **RGBresult;
@@ -395,7 +395,7 @@ void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, R
 //	BMPWrite(RGBresult, head, info, str2.c_str());
 //}
 
-//Линейный средний фильтр параллельный; RH, RW - размеры рангов скользящего окна
+//Р›РёРЅРµР№РЅС‹Р№ СЃСЂРµРґРЅРёР№ С„РёР»СЊС‚СЂ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Р№; RH, RW - СЂР°Р·РјРµСЂС‹ СЂР°РЅРіРѕРІ СЃРєРѕР»СЊР·СЏС‰РµРіРѕ РѕРєРЅР°
 void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
 #pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
@@ -428,7 +428,7 @@ void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int R
 		}
 }
 
-//Формирование матрицы коэффициентов для фильтрации Гаусса параллельное
+//Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РјР°С‚СЂРёС†С‹ РєРѕСЌС„С„РёС†РёРµРЅС‚РѕРІ РґР»СЏ С„РёР»СЊС‚СЂР°С†РёРё Р“Р°СѓСЃСЃР° РїР°СЂР°Р»Р»РµР»СЊРЅРѕРµ
 double** GetGaussMatrixParal(int RH, int RW, double q) {
 	double** Result = new double*[RH * 2 + 1];
 	for (int i = 0; i < RH * 2 + 1; i++)
@@ -448,10 +448,10 @@ double** GetGaussMatrixParal(int RH, int RW, double q) {
 		}
 	return Result;
 }
-//Линейный фильтр Гаусса параллельеный; RH, RW - размеры рангов скользящего окна
+//Р›РёРЅРµР№РЅС‹Р№ С„РёР»СЊС‚СЂ Р“Р°СѓСЃСЃР° РїР°СЂР°Р»Р»РµР»СЊРµРЅС‹Р№; RH, RW - СЂР°Р·РјРµСЂС‹ СЂР°РЅРіРѕРІ СЃРєРѕР»СЊР·СЏС‰РµРіРѕ РѕРєРЅР°
 void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
-	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
+	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //РЎРёРіРјР° С‚СѓС‚
 #pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
