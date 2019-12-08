@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 #include"filtering.h"
 #include<list>
 #include<string>
@@ -6,18 +6,18 @@
 #include<vector>
 using namespace std;
 
-//Реализации формирования гистограмм
+//Р РµР°Р»РёР·Р°С†РёРё С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РіРёСЃС‚РѕРіСЂР°РјРј
 #pragma region formHist
 
-// Формирует гистограмму на основе карты яркости в рамке с радиусами RH, RW на позиции (x,y)
+// Р¤РѕСЂРјРёСЂСѓРµС‚ РіРёСЃС‚РѕРіСЂР°РјРјСѓ РЅР° РѕСЃРЅРѕРІРµ РєР°СЂС‚С‹ СЏСЂРєРѕСЃС‚Рё РІ СЂР°РјРєРµ СЃ СЂР°РґРёСѓСЃР°РјРё RH, RW РЅР° РїРѕР·РёС†РёРё (x,y)
 vector<float> formHist(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
 {
 	int index = 0;
 	int coordX;
 	int coordY;
-	//инициализирую нулями
+	//РёРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РЅСѓР»СЏРјРё
 	vector<float> hist = vector<float>(256);
-	//прохожу по рамке
+	//РїСЂРѕС…РѕР¶Сѓ РїРѕ СЂР°РјРєРµ
 	for (int Y = -RH; Y <= RH; Y++)
 	{
 		coordY = y + Y;
@@ -35,30 +35,30 @@ vector<float> formHist(BYTE** BrMap, int height, int width, int x, int y, int RH
 
 			if (coordY >= height)
 				coordY = height - 1;
-			//инкрементирует элемент гистограммы, соответствующий яркости текущего пикселя
+			//РёРЅРєСЂРµРјРµРЅС‚РёСЂСѓРµС‚ СЌР»РµРјРµРЅС‚ РіРёСЃС‚РѕРіСЂР°РјРјС‹, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёР№ СЏСЂРєРѕСЃС‚Рё С‚РµРєСѓС‰РµРіРѕ РїРёРєСЃРµР»СЏ
 			hist[BrMap[coordY][coordX]] += 1;
 
 		}
 	}
 
-	//определю количество пикселей в рамке
+	//РѕРїСЂРµРґРµР»СЋ РєРѕР»РёС‡РµСЃС‚РІРѕ РїРёРєСЃРµР»РµР№ РІ СЂР°РјРєРµ
 	int size = (RH * 2 + 1)*(RW * 2 + 1);
-	//нормирую гистограмму
+	//РЅРѕСЂРјРёСЂСѓСЋ РіРёСЃС‚РѕРіСЂР°РјРјСѓ
 	for (int i = 0; i < 256; i++)
 		hist[i] /= size;
 	return hist;
 }
 
-// Формирует гистограмму на основе карты яркости в рамке с радиусами RH, RW на позиции (x,y)
-//Параллельный вариант с использованием циклов из ОМП
+// Р¤РѕСЂРјРёСЂСѓРµС‚ РіРёСЃС‚РѕРіСЂР°РјРјСѓ РЅР° РѕСЃРЅРѕРІРµ РєР°СЂС‚С‹ СЏСЂРєРѕСЃС‚Рё РІ СЂР°РјРєРµ СЃ СЂР°РґРёСѓСЃР°РјРё RH, RW РЅР° РїРѕР·РёС†РёРё (x,y)
+//РџР°СЂР°Р»Р»РµР»СЊРЅС‹Р№ РІР°СЂРёР°РЅС‚ СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј С†РёРєР»РѕРІ РёР· РћРњРџ
 vector<float> formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
 {
 	int index = 0;
 	int coordX;
 	int coordY;
-	//инициализирую нулями
+	//РёРЅРёС†РёР°Р»РёР·РёСЂСѓСЋ РЅСѓР»СЏРјРё
 	vector<float> hist = vector<float>(256);
-	//прохожу по рамке
+	//РїСЂРѕС…РѕР¶Сѓ РїРѕ СЂР°РјРєРµ
 	#pragma omp parallel for shared(BrMap, hist) firstprivate(x, y, width, height, RH, RW) schedule(dynamic, 3)
 	for (int Y = -RH; Y <= RH; Y++)
 	{
@@ -77,7 +77,7 @@ vector<float> formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int
 
 			if (coordY >= height)
 				coordY = height - 1;
-			//инкрементирует элемент гистограммы, соответствующий яркости текущего пикселя
+			//РёРЅРєСЂРµРјРµРЅС‚РёСЂСѓРµС‚ СЌР»РµРјРµРЅС‚ РіРёСЃС‚РѕРіСЂР°РјРјС‹, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёР№ СЏСЂРєРѕСЃС‚Рё С‚РµРєСѓС‰РµРіРѕ РїРёРєСЃРµР»СЏ
 			#pragma omp critical
 			{
 			hist[BrMap[coordY][coordX]] += 1;
@@ -86,9 +86,9 @@ vector<float> formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int
 		}
 	}
 
-	//определю количество пикселей в рамке
+	//РѕРїСЂРµРґРµР»СЋ РєРѕР»РёС‡РµСЃС‚РІРѕ РїРёРєСЃРµР»РµР№ РІ СЂР°РјРєРµ
 	int size = (RH * 2 + 1)*(RW * 2 + 1);
-	//нормирую гистограмму
+	//РЅРѕСЂРјРёСЂСѓСЋ РіРёСЃС‚РѕРіСЂР°РјРјСѓ
 	for (int i = 0; i < 256; i++)
 		hist[i] /= size;
 	return hist;
@@ -96,10 +96,10 @@ vector<float> formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int
 
 #pragma endregion
 
-//Реализации получения метрик
+//Р РµР°Р»РёР·Р°С†РёРё РїРѕР»СѓС‡РµРЅРёСЏ РјРµС‚СЂРёРє
 #pragma region getMetrics
 
-//Создаёт метрики по текущей гистограмме
+//РЎРѕР·РґР°С‘С‚ РјРµС‚СЂРёРєРё РїРѕ С‚РµРєСѓС‰РµР№ РіРёСЃС‚РѕРіСЂР°РјРјРµ
 void getMetrics(float &m2, float &u, float &r, float &e, vector<float> &hist)
 {
 	float m = 0;
@@ -116,8 +116,8 @@ void getMetrics(float &m2, float &u, float &r, float &e, vector<float> &hist)
 	e *= -1;
 }
 
-//Создаёт метрики по текущей гистограмме
-//Параллельный вариант с использованием циклов и секций из ОМП
+//РЎРѕР·РґР°С‘С‚ РјРµС‚СЂРёРєРё РїРѕ С‚РµРєСѓС‰РµР№ РіРёСЃС‚РѕРіСЂР°РјРјРµ
+//РџР°СЂР°Р»Р»РµР»СЊРЅС‹Р№ РІР°СЂРёР°РЅС‚ СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј С†РёРєР»РѕРІ Рё СЃРµРєС†РёР№ РёР· РћРњРџ
 void getMetricsOmp(float &m2, float &u, float &r, float &e, vector<float> &hist)
 {
 	float m = 0;
@@ -172,12 +172,12 @@ void getMetricsCilk(float &m2, float &u, float &r, float &e, vector<float> &hist
 
 #pragma endregion
 
-//Реализации текстурных признаков
+//Р РµР°Р»РёР·Р°С†РёРё С‚РµРєСЃС‚СѓСЂРЅС‹С… РїСЂРёР·РЅР°РєРѕРІ
 #pragma region textureFilter
 
-//На вход изображение и размер рамки
-//Выход:
-//Моменты второго порядка, однородность, относительная гладкость, ентропия
+//РќР° РІС…РѕРґ РёР·РѕР±СЂР°Р¶РµРЅРёРµ Рё СЂР°Р·РјРµСЂ СЂР°РјРєРё
+//Р’С‹С…РѕРґ:
+//РњРѕРјРµРЅС‚С‹ РІС‚РѕСЂРѕРіРѕ РїРѕСЂСЏРґРєР°, РѕРґРЅРѕСЂРѕРґРЅРѕСЃС‚СЊ, РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅР°СЏ РіР»Р°РґРєРѕСЃС‚СЊ, РµРЅС‚СЂРѕРїРёСЏ
 //Moments, Uniform, Relative, Enthropy
 void textureFilter(Bitmap &image, int rh, int rw, float **&M, float **&U, float **&R, float **&E)
 {
@@ -198,25 +198,25 @@ void textureFilter(Bitmap &image, int rh, int rw, float **&M, float **&U, float 
 
 	for (int y = 0; y < image.height; y++)
 		for (int x = 0; x < image.width; x++)
-			//перевожу цветную картинку в карут яркости
+			//РїРµСЂРµРІРѕР¶Сѓ С†РІРµС‚РЅСѓСЋ РєР°СЂС‚РёРЅРєСѓ РІ РєР°СЂСѓС‚ СЏСЂРєРѕСЃС‚Рё
 			Brightness[y][x] = image.map[y][x].rgbRed*0.299 + image.map[y][x].rgbGreen*0.587 + image.map[y][x].rgbBlue*0.114;
 
 	for (int y = 0; y < image.height; y++)
 		for (int x = 0; x < image.width; x++)
 		{
-			//получаю гистограмму для окна
+			//РїРѕР»СѓС‡Р°СЋ РіРёСЃС‚РѕРіСЂР°РјРјСѓ РґР»СЏ РѕРєРЅР°
 			hist = formHist(Brightness, image.height, image.width, x, y, rh, rw);
-			//получаю метрики для текущего положения окна
+			//РїРѕР»СѓС‡Р°СЋ РјРµС‚СЂРёРєРё РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РїРѕР»РѕР¶РµРЅРёСЏ РѕРєРЅР°
 			getMetrics(M[y][x], U[y][x], R[y][x], E[y][x], hist);
 		}
-	//возвращаю метрики наверх
+	//РІРѕР·РІСЂР°С‰Р°СЋ РјРµС‚СЂРёРєРё РЅР°РІРµСЂС…
 }
 
-//На вход изображение и размер рамки
-//Выход:
-//Моменты второго порядка, однородность, относительная гладкость, ентропия
+//РќР° РІС…РѕРґ РёР·РѕР±СЂР°Р¶РµРЅРёРµ Рё СЂР°Р·РјРµСЂ СЂР°РјРєРё
+//Р’С‹С…РѕРґ:
+//РњРѕРјРµРЅС‚С‹ РІС‚РѕСЂРѕРіРѕ РїРѕСЂСЏРґРєР°, РѕРґРЅРѕСЂРѕРґРЅРѕСЃС‚СЊ, РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅР°СЏ РіР»Р°РґРєРѕСЃС‚СЊ, РµРЅС‚СЂРѕРїРёСЏ
 //Moments, Uniform, Relative, Enthropy
-//Параллельная реализация, использует распараллеливание операций при обработке рамки
+//РџР°СЂР°Р»Р»РµР»СЊРЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ, РёСЃРїРѕР»СЊР·СѓРµС‚ СЂР°СЃРїР°СЂР°Р»Р»РµР»РёРІР°РЅРёРµ РѕРїРµСЂР°С†РёР№ РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ СЂР°РјРєРё
 void textureFilterOmpInside(Bitmap &image, int rh, int rw, float **&M, float **&U, float **&R, float **&E)
 {
 	M = new float*[image.height];
@@ -237,18 +237,18 @@ void textureFilterOmpInside(Bitmap &image, int rh, int rw, float **&M, float **&
 	#pragma omp parallel for shared(Brightness, image) schedule(dynamic, 50)
 	for (int y = 0; y < image.height; y++)
 		for (int x = 0; x < image.width; x++)
-			//перевожу цветную картинку в карут яркости
+			//РїРµСЂРµРІРѕР¶Сѓ С†РІРµС‚РЅСѓСЋ РєР°СЂС‚РёРЅРєСѓ РІ РєР°СЂСѓС‚ СЏСЂРєРѕСЃС‚Рё
 			Brightness[y][x] = image.map[y][x].rgbRed*0.299 + image.map[y][x].rgbGreen*0.587 + image.map[y][x].rgbBlue*0.114;
 
 	for (int y = 0; y < image.height; y++)
 		for (int x = 0; x < image.width; x++)
 		{
-			//получаю гистограмму для окна
+			//РїРѕР»СѓС‡Р°СЋ РіРёСЃС‚РѕРіСЂР°РјРјСѓ РґР»СЏ РѕРєРЅР°
 			hist = formHistOMP(Brightness, image.height, image.width, x, y, rh, rw);
-			//получаю метрики для текущего положения окна
+			//РїРѕР»СѓС‡Р°СЋ РјРµС‚СЂРёРєРё РґР»СЏ С‚РµРєСѓС‰РµРіРѕ РїРѕР»РѕР¶РµРЅРёСЏ РѕРєРЅР°
 			getMetricsOmp(M[y][x], U[y][x], R[y][x], E[y][x], hist);
 		}
-	//возвращаю метрики наверх
+	//РІРѕР·РІСЂР°С‰Р°СЋ РјРµС‚СЂРёРєРё РЅР°РІРµСЂС…
 }
 
 void textureFilterCilkOutside(Bitmap &image, int rh, int rw, float **&M, float **&U, float **&R, float **&E)
@@ -283,9 +283,9 @@ void textureFilterCilkOutside(Bitmap &image, int rh, int rw, float **&M, float *
 
 #pragma endregion
 
-//Формирует изображение по массиву метрик T[,]
-//fname - имя выходного файла
-//min<t1<t2<max - пороговые значения
+//Р¤РѕСЂРјРёСЂСѓРµС‚ РёР·РѕР±СЂР°Р¶РµРЅРёРµ РїРѕ РјР°СЃСЃРёРІСѓ РјРµС‚СЂРёРє T[,]
+//fname - РёРјСЏ РІС‹С…РѕРґРЅРѕРіРѕ С„Р°Р№Р»Р°
+//min<t1<t2<max - РїРѕСЂРѕРіРѕРІС‹Рµ Р·РЅР°С‡РµРЅРёСЏ
 void formImage(BITMAPFILEHEADER head, BITMAPINFOHEADER info, float** T, int Height, int Width, string fname, float t1, float t2, float _min = 0, float _max = 8000)
 {
 	RGBQUAD** out = new RGBQUAD*[Height];
@@ -294,22 +294,22 @@ void formImage(BITMAPFILEHEADER head, BITMAPINFOHEADER info, float** T, int Heig
 		out[y] = new RGBQUAD[Width]();
 		for (int x = 0; x < Width; x++)
 		{
-			//Если в первом диапазоне, то крашу в зеленый
+			//Р•СЃР»Рё РІ РїРµСЂРІРѕРј РґРёР°РїР°Р·РѕРЅРµ, С‚Рѕ РєСЂР°С€Сѓ РІ Р·РµР»РµРЅС‹Р№
 			if (T[y][x] > t2 && T[y][x] < _max)
 				out[y][x].rgbGreen = 255;
 
-			//Если во втором диапазоне, то крашу в желтый
+			//Р•СЃР»Рё РІРѕ РІС‚РѕСЂРѕРј РґРёР°РїР°Р·РѕРЅРµ, С‚Рѕ РєСЂР°С€Сѓ РІ Р¶РµР»С‚С‹Р№
 			if (T[y][x] > t1 &&T[y][x] < t2)
 			{
 				out[y][x].rgbRed = 255;
 				out[y][x].rgbGreen = 255;
 			}
 
-			//Если в первом диапазоне, то крашу в красный
+			//Р•СЃР»Рё РІ РїРµСЂРІРѕРј РґРёР°РїР°Р·РѕРЅРµ, С‚Рѕ РєСЂР°С€Сѓ РІ РєСЂР°СЃРЅС‹Р№
 			if (T[y][x] > _min && T[y][x] < t1)
 				out[y][x].rgbRed = 255;
 		}
 	}
-	//Сохраняю в файл
+	//РЎРѕС…СЂР°РЅСЏСЋ РІ С„Р°Р№Р»
 	BMPWrite(out, head, info, fname.c_str());
 }
