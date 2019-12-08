@@ -23,9 +23,8 @@ public:
 		map = new RGBQUAD*[height];
 		for (int i = 0; i < height; i++)
 		{
-		map[i] = new RGBQUAD[width];
-		for (int j = 0; j < width; j++)
-			map[i][j] = image[i][j];
+		map[i] = new RGBQUAD[width]();
+		memcpy(map[i], image[i], width * sizeof(RGBQUAD));
 		}
 	}
 	Bitmap(Bitmap& t)
