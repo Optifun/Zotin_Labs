@@ -2,19 +2,21 @@
 #include"filtering.h"
 #include<list>
 #include<string>
+#include<cilk\reducer_vector.h>
+#include<vector>
 using namespace std;
 
 //Реализации формирования гистограмм
 #pragma region formHist
 
 // Формирует гистограмму на основе карты яркости в рамке с радиусами RH, RW на позиции (x,y)
-float* formHist(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
+vector<float> formHist(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
 {
 	int index = 0;
 	int coordX;
 	int coordY;
 	//инициализирую нулями
-	float* hist = new float[256]();
+	vector<float> hist = vector<float>(256);
 	//прохожу по рамке
 	for (int Y = -RH; Y <= RH; Y++)
 	{
@@ -49,13 +51,13 @@ float* formHist(BYTE** BrMap, int height, int width, int x, int y, int RH, int R
 
 // Формирует гистограмму на основе карты яркости в рамке с радиусами RH, RW на позиции (x,y)
 //Параллельный вариант с использованием циклов из ОМП
-float* formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
+vector<float> formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int RH, int RW)
 {
 	int index = 0;
 	int coordX;
 	int coordY;
 	//инициализирую нулями
-	float* hist = new float[256]();
+	vector<float> hist = vector<float>(256);
 	//прохожу по рамке
 	#pragma omp parallel for shared(BrMap, hist) firstprivate(x, y, width, height, RH, RW) schedule(dynamic, 3)
 	for (int Y = -RH; Y <= RH; Y++)
@@ -98,7 +100,7 @@ float* formHistOMP(BYTE** BrMap, int height, int width, int x, int y, int RH, in
 #pragma region getMetrics
 
 //Создаёт метрики по текущей гистограмме
-void getMetrics(float &m2, float &u, float &r, float &e, float* &hist)
+void getMetrics(float &m2, float &u, float &r, float &e, vector<float> &hist)
 {
 	float m = 0;
 	for (int i = 0; i < 256; i++)
@@ -116,7 +118,7 @@ void getMetrics(float &m2, float &u, float &r, float &e, float* &hist)
 
 //Создаёт метрики по текущей гистограмме
 //Параллельный вариант с использованием циклов и секций из ОМП
-void getMetricsOmp(float &m2, float &u, float &r, float &e, float* &hist)
+void getMetricsOmp(float &m2, float &u, float &r, float &e, vector<float> &hist)
 {
 	float m = 0;
 	#pragma omp parallel for reduction(+:m) schedule(dynamic, 45)
@@ -147,6 +149,27 @@ void getMetricsOmp(float &m2, float &u, float &r, float &e, float* &hist)
 	e *= -1;
 }
 
+void getMetricsCilk(float &m2, float &u, float &r, float &e, vector<float> &hist)
+{
+	cilk::reducer<cilk::op_add<float>> m(0);
+	cilk::reducer<cilk::op_add<float>> _e(0);
+	cilk::reducer<cilk::op_add<float>> _u(0);
+	cilk::reducer<cilk::op_add<float>> _m2(0);
+	cilk_for(int i = 0; i < 256; i++)
+		*m += hist[i] * i;
+	float moment = m.get_value();
+	cilk_for(int i = 0; i < 256; i++)
+	{
+		*_m2 += pow((i - moment), 2)*hist[i];
+		*_e += (hist[i] != 0) ? hist[i] * log2(hist[i]) : 0;
+		*_u += pow(hist[i], 2);
+	}
+	m2 = _m2.get_value();
+	r = 1 - (1 / (1 + m2));
+	u = _u.get_value();
+	e = _e.get_value() * -1;
+}
+
 #pragma endregion
 
 //Реализации текстурных признаков
@@ -163,7 +186,7 @@ void textureFilter(Bitmap &image, int rh, int rw, float **&M, float **&U, float 
 	R = new float*[image.height];
 	E = new float*[image.height];
 	BYTE **Brightness = new BYTE*[image.height];
-	float *hist;//256
+	vector<float> hist;//256
 	for (int y = 0; y < image.height; y++)
 	{
 		M[y] = new float[image.width]();
@@ -185,7 +208,6 @@ void textureFilter(Bitmap &image, int rh, int rw, float **&M, float **&U, float 
 			hist = formHist(Brightness, image.height, image.width, x, y, rh, rw);
 			//получаю метрики для текущего положения окна
 			getMetrics(M[y][x], U[y][x], R[y][x], E[y][x], hist);
-			delete[] hist;
 		}
 	//возвращаю метрики наверх
 }
@@ -202,7 +224,7 @@ void textureFilterOmpInside(Bitmap &image, int rh, int rw, float **&M, float **&
 	R = new float*[image.height];
 	E = new float*[image.height];
 	BYTE **Brightness = new BYTE*[image.height];
-	float *hist;//256
+	vector<float> hist;//256
 	#pragma omp parallel for shared(M, U, R, E, Brightness) schedule(dynamic, 50)
 	for (int y = 0; y < image.height; y++)
 	{
@@ -225,9 +247,38 @@ void textureFilterOmpInside(Bitmap &image, int rh, int rw, float **&M, float **&
 			hist = formHistOMP(Brightness, image.height, image.width, x, y, rh, rw);
 			//получаю метрики для текущего положения окна
 			getMetricsOmp(M[y][x], U[y][x], R[y][x], E[y][x], hist);
-			delete[] hist;
 		}
 	//возвращаю метрики наверх
+}
+
+void textureFilterCilkOutside(Bitmap &image, int rh, int rw, float **&M, float **&U, float **&R, float **&E)
+{
+	M = new float*[image.height];
+	U = new float*[image.height];
+	R = new float*[image.height];
+	E = new float*[image.height];
+	BYTE **Brightness = new BYTE*[image.height];
+	cilk_for(int y = 0; y < image.height; y++)
+	{
+		M[y] = new float[image.width]();
+		U[y] = new float[image.width]();
+		R[y] = new float[image.width]();
+		E[y] = new float[image.width]();
+		Brightness[y] = new BYTE[image.width]();
+	}
+	cilk_sync;
+
+	cilk_for(int y = 0; y < image.height; y++)
+		Brightness[y][0:image.width] = image.map[y][0:image.width].rgbRed*0.299 + image.map[y][0:image.width].rgbGreen*0.587 + image.map[y][0:image.width].rgbBlue*0.114;
+	cilk_sync;
+
+	cilk_for(int y = 0; y < image.height; y++)
+		for (int x = 0; x < image.width; x++)
+		{
+			vector<float> hist = formHist(Brightness, image.height, image.width, x, y, rh, rw);
+			getMetricsCilk(M[y][x], U[y][x], R[y][x], E[y][x], hist);
+		}
+	cilk_sync;
 }
 
 #pragma endregion
