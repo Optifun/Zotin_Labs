@@ -8,6 +8,7 @@
 #include<cilk/reducer_opmul.h>
 #include"sorting.h"
 
+using namespace std;
 //Сигнатура метода сортирующего байты
 typedef BYTE*(*ByteSortingMethod)(BYTE* arr, long length, IntComparer compare);
 
@@ -49,17 +50,22 @@ public:
 	RGBQUAD **map;
 };
 
+#pragma region getMedial
+
 //заполнение медиального массива
-RGBQUAD* getMedial(Bitmap &image, int x, int y, int rh, int rw)
+//image - исходная картинка
+//(x,y) - центр рамки
+//RH, RW - радиусы рамки по высоте(height) и ширине(width)
+RGBQUAD* getMedial(Bitmap &image, int x, int y, int RH, int RW)
 {
 	int index = 0;
-	RGBQUAD* barray = new RGBQUAD[rw * rh];
+	RGBQUAD* barray = new RGBQUAD[(2 * RW + 1) * (2 * RH + 1)];
 	int coordX;
 	int coordY;
-	for (int dy = -rh / 2; dy < rh / 2 + rh % 2; dy++)
+	for (int dy = -RH; dy <= RH; dy++)
 	{
 		coordY = y + dy;
-		for (int dx = -rw / 2; dx < rw / 2 + rw % 2; dx++)
+		for (int dx = -RW; dx <= RW; dx++) 
 		{
 			coordX = x + dx;
 			if (coordX < 0)
@@ -80,19 +86,19 @@ RGBQUAD* getMedial(Bitmap &image, int x, int y, int rh, int rw)
 	return barray;
 }
 
-//���������� ����������� �������
-RGBQUAD* getMedialCilkFor(Bitmap &image, int x, int y, int rh, int rw)
+//заполнение медиального массива с Cilk For
+//image - исходная картинка
+//(x,y) - центр рамки
+//RH, RW - радиусы рамки по высоте(height) и ширине(width)
+RGBQUAD* getMedialCilkFor(Bitmap &image, int x, int y, int RH, int RW)
 {
-	int index = 0;
-	RGBQUAD* barray = new RGBQUAD[rw * rh];
-	int coordX;
-	int coordY;
-	cilk_for (int dy = -rh / 2; dy < rh / 2 + rh % 2; dy++)
+	RGBQUAD* barray = new RGBQUAD[(2 * RW + 1) * (2 * RH + 1)];
+	cilk_for (int dy = -RH; dy <= RH; dy++)
 	{
-		coordY = y + dy;
-		for (int dx = -rw / 2; dx < rw / 2 + rw % 2; dx++)
+		int coordY = y + dy;
+		for (int dx = -RW; dx <= RW; dx++)
 		{
-			coordX = x + dx;
+			int coordX = x + dx;
 			if (coordX < 0)
 				coordX = 0;
 
@@ -104,12 +110,18 @@ RGBQUAD* getMedialCilkFor(Bitmap &image, int x, int y, int rh, int rw)
 
 			if (coordY >= image.height)
 				coordY = image.height - 1;
+
+			// индекс = строка * кол-во элем в строке + столбец
+			int index = (RH + y) *(2 * RH + 1) + (RW + x);
 			barray[index] = image.map[coordY][coordX];
-			index++;
 		}
 	}
 	return barray;
 }
+
+#pragma endregion
+
+#pragma region sortRGB
 
 //Сортировка массива РГБ
 RGBQUAD* sortRGB(RGBQUAD* arr, long length, ByteSortingMethod sort)
@@ -142,7 +154,7 @@ RGBQUAD* sortRGB(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	return narr;
 }
 
-//���������� ������� ���
+//сортировка массива РГБ с Cilk spawn + vectorization
 RGBQUAD* sortRGBVec(RGBQUAD* arr, long length, ByteSortingMethod sort)
 {
 	BYTE *red = new BYTE[length];
@@ -175,7 +187,7 @@ RGBQUAD* sortRGBVec(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	return narr;
 }
 
-//������������ ���������� ������� ���
+//сортировка массива РГБ с Omp sections+for
 RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 {
 	BYTE *red = new BYTE[length];
@@ -218,8 +230,16 @@ RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 	return narr;
 }
 
-//медиальная фильтрация
-RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+#pragma endregion
+
+#pragma region medianFiltering
+
+//медианная фильтрация
+//image - исходное изображение
+//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//method - метод сортировки байтового массива
+//Возвращает изображение с примененным на нём медианную фильтрацию
+RGBQUAD** medianFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
 	RGBQUAD *temp1, *temp2;
@@ -230,8 +250,8 @@ RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMet
 		{
 			//в окне H x W ложу пиксели в массив temp
 			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGB(temp1, wHeight * wWidth, method); // сортирую каждую из компонент
-			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			temp2 = sortRGB(temp1, (2 * wHeight + 1) * (2 * wWidth + 1), method); // сортирую каждую из компонент
+			out[y][x] = temp2[(2 * wHeight + 1) * (2 * wWidth + 1) / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -239,8 +259,12 @@ RGBQUAD** medialFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMet
 	return out;
 }
 
-//медиальная фильтрация c распараллеливанием сортировки по компонентам
-RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+//медианная фильтрация c распараллеливанием сортировки по компонентам
+//image - исходное изображение
+//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//method - метод сортировки байтового массива
+//Возвращает изображение с примененным на нём медианную фильтрацию
+RGBQUAD** medianFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
 	RGBQUAD *temp1, *temp2;
@@ -251,8 +275,8 @@ RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteS
 		{
 			//в окне H x W ложу пиксели в массив temp
 			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGBAsync(temp1, wHeight * wWidth, method);
-			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			temp2 = sortRGBAsync(temp1, (2 * wHeight + 1) * (2 * wWidth + 1), method);
+			out[y][x] = temp2[(2 * wHeight + 1) * (2 * wWidth + 1) / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -260,8 +284,12 @@ RGBQUAD** medialFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteS
 	return out;
 }
 
-//медиальная фильтрация for
-RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+//медианная фильтрация Omp For
+//image - исходное изображение
+//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//method - метод сортировки байтового массива
+//Возвращает изображение с примененным на нём медианную фильтрацию
+RGBQUAD** medianFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height]; // на выходе картинка с примененным фильтром
 	RGBQUAD *temp1, *temp2;
@@ -273,8 +301,8 @@ RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSorti
 		{
 			//в окне H x W ложу пиксели в массив temp
 			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGB(temp1, wHeight * wWidth, method);
-			out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
+			temp2 = sortRGB(temp1, (2 * wHeight + 1) * (2 * wWidth + 1), method);
+			out[y][x] = temp2[(2 * wHeight + 1) * (2 * wWidth + 1) / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -282,20 +310,23 @@ RGBQUAD** medialFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSorti
 	return out;
 }
 
-//���������� ���������� for
-RGBQUAD** medialFilteringSilkFor(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+//медианная фильтрация c Cilk For
+//image - исходное изображение
+//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//method - метод сортировки байтового массива
+//Возвращает изображение с примененным на нём медианную фильтрацию
+RGBQUAD** medianFilteringSilkFor(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
 {
-	RGBQUAD **out = new RGBQUAD*[image.height]; // �� ������ �������� � ����������� ��������
+	RGBQUAD **out = new RGBQUAD*[image.height];
 	RGBQUAD *temp1, *temp2;
 	cilk_for (int y = 0; y < image.height; y++)
 	{
 		out[y] = new RGBQUAD[image.width];
 		for (int x = 0; x < image.width; x++)
 		{
-			//� ���� H x W ���� ������� � ������ temp
-			temp1 = getMedialCilkFor(image, x, y, wHeight, wWidth); //�������� ���������� ������
+			temp1 = getMedialCilkFor(image, x, y, wHeight, wWidth);
 			temp2 = sortRGBVec(temp1, wHeight * wWidth, method);
-			out[y][x] = temp2[wHeight * wWidth / 2]; // ���������� ��������� �������
+			out[y][x] = temp2[wHeight * wWidth / 2];
 			delete[] temp1;
 			delete[] temp2;
 		}
@@ -303,8 +334,12 @@ RGBQUAD** medialFilteringSilkFor(Bitmap &image, int wHeight, int wWidth, ByteSor
 	return out;
 }
 
-//���������� ���������� sections
-RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method, int sections)
+//медианная фильтрация Omp Sections
+//image - исходное изображение
+//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//method - метод сортировки байтового массива
+//Возвращает изображение с примененным на нём медианную фильтрацию
+RGBQUAD** medianFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method, int sections)
 {
 	RGBQUAD **out = new RGBQUAD*[image.height];
 	RGBQUAD *temp1, *temp2;
@@ -376,6 +411,10 @@ RGBQUAD** medialFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 	return out;
 }
 
+#pragma endregion
+
+#pragma region LinerFiltering
+
 //Линейный средний фильтр последовательный; RH, RW - размеры рангов скользящего окна
 void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
@@ -408,6 +447,43 @@ void LineFilteringSred(RGBQUAD** &RGB, int height, int width, int RH, int RW, RG
 		}
 }
 
+//Линейный средний фильтр параллельный; RH, RW - размеры рангов скользящего окна
+void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+#pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
+	for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			for (int DY = -RH; DY <= RH; DY++)
+			{
+				int KY = Y + DY;
+				if (KY < 0)
+					KY = 0;
+				if (KY > height - 1)
+					KY = height - 1;
+				for (int DX = -RW; DX <= RW; DX++)
+				{
+					int KX = X + DX;
+					if (KX < 0)
+						KX = 0;
+					if (KX > width - 1)
+						KX = width - 1;
+					rgbBlue += RGB[KY][KX].rgbBlue;
+					rgbGreen += RGB[KY][KX].rgbGreen;
+					rgbRed += RGB[KY][KX].rgbRed;
+				}
+			}
+			RGBresult[Y][X].rgbBlue = rgbBlue / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbGreen = rgbGreen / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbRed = rgbRed / ((RH * 2 + 1) * (RW * 2 + 1));
+		}
+}
+
+#pragma endregion
+
+#pragma region GausMatrix
+
 //Формирование матрицы коэффициентов для фильтрации Гаусса
 double** GetGaussMatrix(int RH, int RW, double q) {
 	double** Result = new double*[RH * 2 + 1];
@@ -425,6 +501,33 @@ double** GetGaussMatrix(int RH, int RW, double q) {
 			Result[Y + RH][X + RW] /= SUM;
 	return Result;
 }
+
+//Формирование матрицы коэффициентов для фильтрации Гаусса параллельное
+double** GetGaussMatrixParal(int RH, int RW, double q) {
+	double** Result = new double*[RH * 2 + 1];
+	for (int i = 0; i < RH * 2 + 1; i++)
+		Result[i] = new double[RW * 2 + 1];
+	double SUM = 0;
+#pragma omp parallel for reduction(+:SUM) firstprivate(RH, RW, q) shared(Result) schedule(static, RH)
+	for (int Y = -RH; Y <= RH; Y++)
+		for (int X = -RW; X <= RW; X++) {
+			double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
+			Result[Y + RH][X + RW] = CF;
+			SUM += CF;
+		}
+#pragma omp parallel for firstprivate(RH, RW, q, SUM) shared(Result) schedule(static, RH)
+	for (int Y = -RH; Y <= RH; Y++)
+		for (int X = -RW; X <= RW; X++) {
+			Result[Y + RH][X + RW] /= SUM;
+		}
+	return Result;
+}
+
+#pragma endregion
+
+
+#pragma region GausFiltering
+
 //Линейный фильтр Гаусса последовательный; RH, RW - размеры рангов скользящего окна
 void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
@@ -468,75 +571,6 @@ void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, R
 	delete[] CoefMatrix;
 }
 
-//Пример использования
-//int main() {
-//	cout << "Hello World!\n";
-//	RGBQUAD **RGB, **RGBresult;
-//	BITMAPFILEHEADER head;
-//	BITMAPINFOHEADER info;
-//	string str = "1.bmp";
-//	string str2 = "11.bmp";
-//	BMPRead(RGB, head, info, "1.bmp");
-//	RGBresult = new RGBQUAD*[info.biHeight];
-//	for (int i = 0; i < info.biHeight; i++)
-//		RGBresult[i] = new RGBQUAD[info.biWidth];
-//	LineFilteringGauss(RGB, info.biHeight, info.biWidth, 5, 5, RGBresult);
-//	BMPWrite(RGBresult, head, info, str2.c_str());
-//}
-
-//Линейный средний фильтр параллельный; RH, RW - размеры рангов скользящего окна
-void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
-{
-#pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
-	for (int Y = 0; Y < height; Y++)
-		for (int X = 0; X < width; X++)
-		{
-			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
-			for (int DY = -RH; DY <= RH; DY++)
-			{
-				int KY = Y + DY;
-				if (KY < 0)
-					KY = 0;
-				if (KY > height - 1)
-					KY = height - 1;
-				for (int DX = -RW; DX <= RW; DX++)
-				{
-					int KX = X + DX;
-					if (KX < 0)
-						KX = 0;
-					if (KX > width - 1)
-						KX = width - 1;
-					rgbBlue += RGB[KY][KX].rgbBlue;
-					rgbGreen += RGB[KY][KX].rgbGreen;
-					rgbRed += RGB[KY][KX].rgbRed;
-				}
-			}
-			RGBresult[Y][X].rgbBlue = rgbBlue / ((RH * 2 + 1) * (RW * 2 + 1));
-			RGBresult[Y][X].rgbGreen = rgbGreen / ((RH * 2 + 1) * (RW * 2 + 1));
-			RGBresult[Y][X].rgbRed = rgbRed / ((RH * 2 + 1) * (RW * 2 + 1));
-		}
-}
-
-//Формирование матрицы коэффициентов для фильтрации Гаусса параллельное
-double** GetGaussMatrixParal(int RH, int RW, double q) {
-	double** Result = new double*[RH * 2 + 1];
-	for (int i = 0; i < RH * 2 + 1; i++)
-		Result[i] = new double[RW * 2 + 1];
-	double SUM = 0;
-#pragma omp parallel for reduction(+:SUM) firstprivate(RH, RW, q) shared(Result) schedule(static, RH)
-	for (int Y = -RH; Y <= RH; Y++)
-		for (int X = -RW; X <= RW; X++) {
-			double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
-			Result[Y + RH][X + RW] = CF;
-			SUM += CF;
-		}
-#pragma omp parallel for firstprivate(RH, RW, q, SUM) shared(Result) schedule(static, RH)
-	for (int Y = -RH; Y <= RH; Y++)
-		for (int X = -RW; X <= RW; X++) {
-			Result[Y + RH][X + RW] /= SUM;
-		}
-	return Result;
-}
 //Линейный фильтр Гаусса параллельеный; RH, RW - размеры рангов скользящего окна
 void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
@@ -580,4 +614,20 @@ void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int 
 		delete[] CoefMatrix[i];
 	delete[] CoefMatrix;
 }
+#pragma endregion
 
+//Пример использования
+//int main() {
+//	cout << "Hello World!\n";
+//	RGBQUAD **RGB, **RGBresult;
+//	BITMAPFILEHEADER head;
+//	BITMAPINFOHEADER info;
+//	string str = "1.bmp";
+//	string str2 = "11.bmp";
+//	BMPRead(RGB, head, info, "1.bmp");
+//	RGBresult = new RGBQUAD*[info.biHeight];
+//	for (int i = 0; i < info.biHeight; i++)
+//		RGBresult[i] = new RGBQUAD[info.biWidth];
+//	LineFilteringGauss(RGB, info.biHeight, info.biWidth, 5, 5, RGBresult);
+//	BMPWrite(RGBresult, head, info, str2.c_str());
+//}
