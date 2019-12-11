@@ -6,6 +6,8 @@
 #include<vector>
 using namespace std;
 
+typedef void(*txFilter)(Bitmap &image, int rh, int rw, float **&M, float **&U, float **&R, float **&E);
+
 //Реализации формирования гистограмм
 #pragma region formHist
 
