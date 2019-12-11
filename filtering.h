@@ -12,6 +12,9 @@ using namespace std;
 //Сигнатура метода сортирующего байты
 typedef BYTE*(*ByteSortingMethod)(BYTE* arr, long length, IntComparer compare);
 
+//Сигнатуры медианного и Гауссовского фильтров
+typedef void(*Median)(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method);
+typedef void(*Gauss)(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult);
 //Класс битмап изображения, хранящий поле пикселей ширину и высоту
 class Bitmap
 {
