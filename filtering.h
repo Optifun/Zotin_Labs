@@ -56,7 +56,7 @@ public:
 //image - исходная картинка
 //(x,y) - центр рамки
 //RH, RW - радиусы рамки по высоте(height) и ширине(width)
-RGBQUAD* getMedial(Bitmap &image, int x, int y, int RH, int RW)
+RGBQUAD* getMedial(RGBQUAD **&image, int height, int width, int x, int y, int RH, int RW)
 {
 	int index = 0;
 	RGBQUAD* barray = new RGBQUAD[(2 * RW + 1) * (2 * RH + 1)];
@@ -71,15 +71,15 @@ RGBQUAD* getMedial(Bitmap &image, int x, int y, int RH, int RW)
 			if (coordX < 0)
 				coordX = 0;
 
-			if (coordX >= image.width)
-				coordX = image.width - 1;
+			if (coordX >= width)
+				coordX = width - 1;
 
 			if (coordY < 0)
 				coordY = 0;
 
-			if (coordY >= image.height)
-				coordY = image.height - 1;
-			barray[index] = image.map[coordY][coordX];
+			if (coordY >= height)
+				coordY = height - 1;
+			barray[index] = image[coordY][coordX];
 			index++;
 		}
 	}
@@ -90,7 +90,7 @@ RGBQUAD* getMedial(Bitmap &image, int x, int y, int RH, int RW)
 //image - исходная картинка
 //(x,y) - центр рамки
 //RH, RW - радиусы рамки по высоте(height) и ширине(width)
-RGBQUAD* getMedialCilkFor(Bitmap &image, int x, int y, int RH, int RW)
+RGBQUAD* getMedialCilkFor(RGBQUAD **&image, int height, int width, int x, int y, int RH, int RW)
 {
 	RGBQUAD* barray = new RGBQUAD[(2 * RW + 1) * (2 * RH + 1)];
 	cilk_for (int dy = -RH; dy <= RH; dy++)
@@ -102,18 +102,18 @@ RGBQUAD* getMedialCilkFor(Bitmap &image, int x, int y, int RH, int RW)
 			if (coordX < 0)
 				coordX = 0;
 
-			if (coordX >= image.width)
-				coordX = image.width - 1;
+			if (coordX >= width)
+				coordX = width - 1;
 
 			if (coordY < 0)
 				coordY = 0;
 
-			if (coordY >= image.height)
-				coordY = image.height - 1;
+			if (coordY >= height)
+				coordY = height - 1;
 
 			// индекс = строка * кол-во элем в строке + столбец
 			int index = (RH + y) *(2 * RH + 1) + (RW + x);
-			barray[index] = image.map[coordY][coordX];
+			barray[index] = image[coordY][coordX];
 		}
 	}
 	return barray;
@@ -235,79 +235,79 @@ RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 #pragma region medianFiltering
 
 //медианная фильтрация
-//image - исходное изображение
-//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//RGB - исходное изображение
+//RH, RW - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает изображение с примененным на нём медианную фильтрацию
-RGBQUAD** medianFiltering(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+//Возвращает RGBQUAD -  изображение с примененным на нём медианную фильтрацию
+void medianFiltering(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBQUAD **out = new RGBQUAD*[image.height];
+	RGBresult = new RGBQUAD*[height];
 	RGBQUAD *temp1, *temp2;
-	for (int y = 0; y < image.height; y++)
+	int size = (2 * RH + 1) * (2 * RW + 1);
+	for (int y = 0; y < height; y++)
 	{
-		out[y] = new RGBQUAD[image.width];
-		for (int x = 0; x < image.width; x++)
+		RGBresult[y] = new RGBQUAD[width];
+		for (int x = 0; x < width; x++)
 		{
 			//в окне H x W ложу пиксели в массив temp
-			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGB(temp1, (2 * wHeight + 1) * (2 * wWidth + 1), method); // сортирую каждую из компонент
-			out[y][x] = temp2[(2 * wHeight + 1) * (2 * wWidth + 1) / 2]; // вытаскиваю срединный элемент
+			temp1 = getMedial(RGB, width, height, x, y, RH, RW); //заполняю медиальный массив
+			temp2 = sortRGB(temp1, size, method); // сортирую каждую из компонент
+			RGBresult[y][x] = temp2[size / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
 		}
 	}
-	return out;
 }
 
 //медианная фильтрация c распараллеливанием сортировки по компонентам
-//image - исходное изображение
-//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//RGB - исходное изображение
+//RH, RW - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает изображение с примененным на нём медианную фильтрацию
-RGBQUAD** medianFilteringAsyncSort(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+//Возвращает RGBQUAD -  изображение с примененным на нём медианную фильтрацию
+void medianFilteringAsyncSort(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBQUAD **out = new RGBQUAD*[image.height];
+	RGBQUAD **RGBresult = new RGBQUAD*[height];
 	RGBQUAD *temp1, *temp2;
-	for (int y = 0; y < image.height; y++)
+	int size = (2 * RH + 1) * (2 * RW + 1);
+	for (int y = 0; y < height; y++)
 	{
-		out[y] = new RGBQUAD[image.width];
-		for (int x = 0; x < image.width; x++)
+		RGBresult[y] = new RGBQUAD[width];
+		for (int x = 0; x < width; x++)
 		{
 			//в окне H x W ложу пиксели в массив temp
-			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGBAsync(temp1, (2 * wHeight + 1) * (2 * wWidth + 1), method);
-			out[y][x] = temp2[(2 * wHeight + 1) * (2 * wWidth + 1) / 2]; // вытаскиваю срединный элемент
+			temp1 = getMedial(RGB, width, height, x, y, RH, RW); //заполняю медиальный массив
+			temp2 = sortRGBAsync(temp1, size, method);
+			RGBresult[y][x] = temp2[size / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
 		}
 	}
-	return out;
 }
 
 //медианная фильтрация Omp For
-//image - исходное изображение
-//wHeight, wWidth - радиусы рамки по вертикали и горизонтали
+//RGB - исходное изображение
+//RH, RW - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает изображение с примененным на нём медианную фильтрацию
-RGBQUAD** medianFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+//Возвращает RGBQUAD -  изображение с примененным на нём медианную фильтрацию
+void medianFilteringAsync(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBQUAD **out = new RGBQUAD*[image.height]; // на выходе картинка с примененным фильтром
+	RGBQUAD **RGBresult = new RGBQUAD*[height]; // на выходе картинка с примененным фильтром
 	RGBQUAD *temp1, *temp2;
-	#pragma omp parallel for private(temp1, temp2) shared(image, out) schedule(static, wHeight)
-	for (int y = 0; y < image.height; y++)
+	int size = (2 * RH + 1) * (2 * RW + 1);
+	#pragma omp parallel for private(temp1, temp2) shared(RGB, RGBresult) schedule(static, wHeight)
+	for (int y = 0; y < height; y++)
 	{
-		out[y] = new RGBQUAD[image.width];
-		for (int x = 0; x < image.width; x++)
+		RGBresult[y] = new RGBQUAD[width];
+		for (int x = 0; x < width; x++)
 		{
 			//в окне H x W ложу пиксели в массив temp
-			temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
-			temp2 = sortRGB(temp1, (2 * wHeight + 1) * (2 * wWidth + 1), method);
-			out[y][x] = temp2[(2 * wHeight + 1) * (2 * wWidth + 1) / 2]; // вытаскиваю срединный элемент
+			temp1 = getMedial(RGB, width, height, x, y, RH, RW); //заполняю медиальный массив
+			temp2 = sortRGB(temp1, size, method);
+			RGBresult[y][x] = temp2[size / 2]; // вытаскиваю срединный элемент
 			delete[] temp1;
 			delete[] temp2;
 		}
 	}
-	return out;
 }
 
 //медианная фильтрация c Cilk For
@@ -315,23 +315,23 @@ RGBQUAD** medianFilteringAsync(Bitmap &image, int wHeight, int wWidth, ByteSorti
 //wHeight, wWidth - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
 //Возвращает изображение с примененным на нём медианную фильтрацию
-RGBQUAD** medianFilteringSilkFor(Bitmap &image, int wHeight, int wWidth, ByteSortingMethod method)
+void medianFilteringCilkFor(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBQUAD **out = new RGBQUAD*[image.height];
+	RGBQUAD **RGBresult = new RGBQUAD*[height];
 	RGBQUAD *temp1, *temp2;
-	cilk_for (int y = 0; y < image.height; y++)
+	int size = (2 * RH + 1) * (2 * RW + 1);
+	cilk_for (int y = 0; y < height; y++)
 	{
-		out[y] = new RGBQUAD[image.width];
-		for (int x = 0; x < image.width; x++)
+		RGBresult[y] = new RGBQUAD[width];
+		for (int x = 0; x < width; x++)
 		{
-			temp1 = getMedialCilkFor(image, x, y, wHeight, wWidth);
-			temp2 = sortRGBVec(temp1, wHeight * wWidth, method);
-			out[y][x] = temp2[wHeight * wWidth / 2];
+			temp1 = getMedialCilkFor(RGB, width, height, x, y, RH, RW);
+			temp2 = sortRGBVec(temp1, size, method);
+			RGBresult[y][x] = temp2[size / 2];
 			delete[] temp1;
 			delete[] temp2;
 		}
 	}
-	return out;
 }
 
 //медианная фильтрация Omp Sections
@@ -359,7 +359,7 @@ RGBQUAD** medianFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				for (int x = t1; x < t2; x++)
 				{
 					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					temp1 = getMedial(image.map, image.width, image.height, x, y, wHeight, wWidth); //заполняю медиальный массив
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
 					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
 					delete[] temp1;
@@ -372,7 +372,7 @@ RGBQUAD** medianFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				for (int x = t2; x < t3; x++)
 				{
 					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					temp1 = getMedial(image.map, image.width, image.height, x, y, wHeight, wWidth); //заполняю медиальный массив
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
 					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
 					delete[] temp1;
@@ -385,7 +385,7 @@ RGBQUAD** medianFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				for (int x = t3; x < t4; x++)
 				{
 					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					temp1 = getMedial(image.map, image.width, image.height, x, y, wHeight, wWidth); //заполняю медиальный массив
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
 					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
 					delete[] temp1;
@@ -398,7 +398,7 @@ RGBQUAD** medianFilteringAsyncSec(Bitmap &image, int wHeight, int wWidth, ByteSo
 				for (int x = t4; x < t4+step; x++)
 				{
 					//в окне H x W ложу пиксели в массив temp
-					temp1 = getMedial(image, x, y, wHeight, wWidth); //заполняю медиальный массив
+					temp1 = getMedial(image.map, image.width, image.height, x, y, wHeight, wWidth); //заполняю медиальный массив
 					temp2 = sortRGB(temp1, wHeight * wWidth, method);
 					out[y][x] = temp2[wHeight * wWidth / 2]; // вытаскиваю срединный элемент
 					delete[] temp1;
@@ -524,7 +524,6 @@ double** GetGaussMatrixParal(int RH, int RW, double q) {
 }
 
 #pragma endregion
-
 
 #pragma region GausFiltering
 
