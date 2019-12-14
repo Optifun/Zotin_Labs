@@ -78,20 +78,20 @@ public:
 	//¬озвращает матрицу размерностью NxM заполненную единицами
 	static Matrix<Type> Ones(long _n, long _m)
 	{
-		return Matrix<Type>(_n, _m, Filler<Type>([](long, long)->double {return 1; }));
+		return Matrix<Type>(_n, _m, [](long, long)->double {return 1; });
 	}
 	
 	//¬озвращает матрицу размерностью NxM заполненную нул€ми
 	static Matrix<Type> Zeros(long _n, long _m)
 	{
-		return Matrix<Type>(_n, _m, Filler<Type>([](long, long)->double {return 0; }));
+		return Matrix<Type>(_n, _m, [](long, long)->double {return 0; });
 	}
 	
 	//¬озвращает единичную матрицу размерностью NxM
 	static Matrix<Type> E(long _n, long _m)
 	{
 		auto t = min(_n, _m);
-		return Matrix<Type>(t, t, Filler<Type>([](long x, long y)->double {return (x == y) ? 1 : 0; }));
+		return Matrix<Type>(t, t, [](long x, long y)->double {return (x == y) ? 1 : 0; });
 	}
 
 	//¬озвращает матрицу размерностью 1х1 с элементом равным нулю
@@ -117,7 +117,7 @@ public:
 		n = _n;
 		m = _m;
 		arr = allocateArr(n, m);
-		fillMatrix(Filler<Type>([](long, long) ->double { return 0; }));
+		fillMatrix([](long, long) ->double { return 0; });
 	}
 
 	//¬озвращает копию матрицы
@@ -133,7 +133,7 @@ public:
 	}
 
 	//¬озвращает матрицу размерностью NxM, элементы которой заполнены использу€ функцию сигнатуры fillF
-	Matrix(long _n, long _m, Filler<Type> filler)
+	Matrix(long _n, long _m, fillF filler)
 	{
 		num = Created;
 		if (DEBUG)
@@ -358,9 +358,10 @@ private:
 	Type SumSeq()
 	{
 		Type S = 0;
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				S += arr[i][j];
+		Type **arr1 = this->arr;
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
 		return S;
 	}
 
@@ -368,10 +369,11 @@ private:
 	Type SumOmpFor()
 	{
 		Type S = 0;
+		Type **arr1 = this->arr;
 		#pragma omp parallel for reduction(+:S)
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				S += arr[i][j];
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
 		return S;
 	}
 
@@ -385,46 +387,49 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-#pragma omp parallel sections reduction(+:S) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr;
+#pragma omp parallel sections reduction(+:S) shared(arr1) firstprivate(t1, t2, t3, t4, step)
 		{
 #pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 #pragma omp section
 			{
 				if (_threads>1)
 				for (long i = t2; i < t3; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 #pragma omp section
 			{
 				if (_threads>2)
 				for (long i = t3; i < t4; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 #pragma omp section
 			{
 				if (_threads>3)
 				for (long i = t4; i < t4 + step; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 		}
 		return S;
 	}
+
 	// —ложение элементов с параллельным циклом на —илке
 	Type SumCilkFor()
 	{
 		//редуктор на сложение равный нулю
 		cilk::reducer_opadd<Type> S(0);
-		cilk_for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				S += arr[i][j];
+		Type **arr1 = this->arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
 		return S.get_value();
 	}
 
@@ -433,32 +438,61 @@ private:
 	{
 		Type S;
 		// прохожусь по i = 0:n, по j = 0:m, примен€ю редукцию на сложение
-		S = __sec_reduce_add(arr[0:n][0:m]);
+		Type **arr1 = this->arr;
+		S = __sec_reduce_add(arr1[0:this->n][0:this->m]);
 		return S;
 	}
 
 	// —ложение элементов со спавном параллельных веток
-	Type SumCilkSpawn()
+	Type SumCilkSpawn(int _threads)
 	{
 		//редуктор на сложение равный нулю
 		cilk::reducer_opadd<Type> S(0);
-		for (long i = 0; i < n; i++)
-		{
-			//—пав новой ветки
-			cilk_spawn [&S, i, this]() {
-				for (long j = 0; j < m; j++)
-					S += arr[i][j];
-			}();
-		}
+		float step = n / _threads;
+		int mod = n % _threads;
+		int t1 = 0;
+		int t2 = step * 1 + mod;
+		int t3 = t2 + step;
+		int t4 = t3 + step;
+		int t5 = t4 + step;
+		Type **arr1 = this->arr;
+		cilk_spawn [&S, &t2, &t3, &_threads, &arr1, this]() {
+			if (_threads>1)
+			for (long i = t2; i < t3; i++)
+				for (long j = 0; j < this->m; j++)
+					S += arr1[i][j];
+		}();
+
+		cilk_spawn[&S, &t3, &t4, &_threads, &arr1, this]() {
+			if (_threads>2)
+				for (long i = t3; i < t4; i++)
+					for (long j = 0; j < this->m; j++)
+						S += arr1[i][j];
+		}();
+
+		cilk_spawn[&S, &t4, &t5, &_threads, &arr1, this]() {
+			if (_threads>3)
+				for (long i = t4; i < t5; i++)
+					for (long j = 0; j < this->m; j++)
+						S += arr1[i][j];
+		}();
+
+		for (long i = t1; i < t2; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
+		
+
 		cilk_sync; //синхронизирую ветки здесь
 		return S.get_value();
 	}
+
 	// —ложение элементов с параллельным циклом и векторизацией
 	Type SumCilkForVec()
 	{
 		cilk::reducer_opadd<Type> S(0);
-		cilk_for (long i = 0; i < n; i++)
-			S += __sec_reduce_add(arr[i][0:m]);
+		Type **arr1 = this->arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			S += __sec_reduce_add(arr1[i][0:this->m]);
 		return S.get_value();
 	}
 #pragma endregion
@@ -472,21 +506,24 @@ private:
 		if (m != _m.m || n != _m.n)
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				arr3[i][j] = arr1[i][j] + arr2[i][j];
 		return res;
 	}
+
 	// —ложение двух матриц с параллельным циклом
 	Matrix<Type> AddOmpFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)	
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		#pragma omp parallel for shared(res, arr, _m)
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		#pragma omp parallel for shared(arr1,arr2,arr3)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
-				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+				arr3[i][j] = arr1[i][j] + arr2[i][j];
 		return res;
 	}
 
@@ -502,34 +539,35 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections shared(res, arr, _m) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		#pragma omp parallel sections shared(arr1, arr2, arr3) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 			#pragma omp section
 			{
 				if (_threads>1)
 				for (long i = t2; i < t3; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 			#pragma omp section
 			{
 				if (_threads>2)
 				for (long i = t3; i < t4; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 			#pragma omp section
 			{
 				if (_threads>3)
 				for (long i = t4; i < t4 + step; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 		}
 		return res;
@@ -541,24 +579,53 @@ private:
 		if (m != _m.m || n != _m.n)
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		cilk_for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				arr3[i][j] = arr1[i][j] + arr2[i][j];
 		return res;
 	}
 
 	// —ложение двух матриц со спавном веток
-	Matrix<Type> AddCilkSpawn(Matrix<Type> &_m)
+	Matrix<Type> AddCilkSpawn(Matrix<Type> &_m, int _threads)
 	{
 		if (m != _m.m || n != _m.n)
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				cilk_spawn [&res, &_m, i, this]() {
-					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
-				}();
+		float step = n / _threads;
+		int mod = n % _threads;
+		int t1 = 0;
+		int t2 = step * 1 + mod;
+		int t3 = t2 + step;
+		int t4 = t3 + step;
+		int t5 = t4 + step;
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+
+		cilk_spawn [&res, &_m, &t2, &t3, &_threads, &arr1, &arr2, &arr3, this]() {
+			if (_threads>1)
+			for (long i = t2; i < t3; i++)
+				for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+		}();
+
+		cilk_spawn[&res, &_m, &t3, &t4, &_threads, &arr1, &arr2, &arr3, this]() {
+			if (_threads>2)
+			for (long i = t3; i < t4; i++)
+				for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+		}();
+
+		cilk_spawn[&res, &_m, &t4, &t5, &_threads, &arr1, &arr2, &arr3, this]() {
+			if (_threads>3)
+			for (long i = t4; i < t5; i++)
+				for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+		}();
+
+		for (long i = t1; i < t2; i++)
+			for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+
 		cilk_sync;
 		return res;
 	}
@@ -569,7 +636,8 @@ private:
 		if (m != _m.m || n != _m.n)
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		res.arr[0:n][0:m] = arr[0:n][0:m] + _m.arr[0:n][0:m];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		res.arr[0:this->n][0:this->m] = arr[0:this->n][0:this->m] + _m.arr[0:this->n][0:this->m];
 		return res;
 	}
 
@@ -579,8 +647,9 @@ private:
 		if (m != _m.m || n != _m.n)
 			throw new exception("Ќедопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		cilk_for(long i = 0; i < n; i++)
-				res.arr[i][0:m] = arr[i][0:m] + _m.arr[i][0:m];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		cilk_for(long i = 0; i < this->n; i++)
+				arr3[i][0:this->m] = arr1[i][0:this->m] + arr2[i][0:this->m];
 		return res;
 	}
 
@@ -593,9 +662,10 @@ private:
 	Type MulSeq()
 	{
 		Type Prod = 1;
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				Prod *= arr[i][j];
+		Type **arr1 = this->arr;
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				Prod *= arr1[i][j];
 		return Prod;
 	}
 
@@ -603,10 +673,11 @@ private:
 	Type MulOmpFor()
 	{
 		Type Prod = 1;
-		#pragma omp parallel for reduction(*:Prod)
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				Prod *= arr[i][j];
+		Type **arr1 = this->arr;
+		#pragma omp parallel for reduction(*:Prod) shared(arr1)
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				Prod *= arr1[i][j];
 		return Prod;
 	}
 
@@ -614,43 +685,44 @@ private:
 	Type MulOmpSec(int _threads)
 	{
 		Type Prod = 1;
-		float step = n / _threads;
-		int mod = n % _threads;
+		float step = this->n / _threads;
+		int mod = this->n % _threads;
 		int t1 = 0;
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections reduction(*:Prod) shared(arr) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr;
+		#pragma omp parallel sections reduction(*:Prod) shared(arr1) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 			#pragma omp section
 			{
 				if (_threads>1)
 				for (long i = t2; i < t3; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 			#pragma omp section
 			{
 				if (_threads>2)
 				for (long i = t3; i < t4; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 			#pragma omp section
 			{
 				if (_threads>3)
 				for (long i = t4; i < t4 + step; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 		}
@@ -661,22 +733,50 @@ private:
 	Type MulCilkFor()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
-		//Type Prod = 1;
-		cilk_for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				*Prod *= arr[i][j];
+		Type **arr1 = this->arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				*Prod *= arr1[i][j];
 		return Prod.get_value();
 	}
 
 	// ѕеремножение матриц со спавном новых веток
-	Type MulCilkSpawn()
+	Type MulCilkSpawn(int _threads)
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
-		for (long i = 0; i < n; i++)
-			cilk_spawn[&Prod, i, this]() {
-				for (long j = 0; j < m; j++)
-					*Prod *= arr[i][j];
+		float step = this->n / _threads;
+		int mod = this->n % _threads;
+		int t1 = 0;
+		int t2 = step * 1 + mod;
+		int t3 = t2 + step;
+		int t4 = t3 + step;
+		int t5 = t4 + step;
+		Type **arr1 = this->arr;
+		cilk_spawn[&Prod, &t2, &t3, &_threads, arr1, this]() {
+			if (_threads>1)
+			for (long i = t2; i < t3; i++)
+				for (long j = 0; j < this->m; j++)
+					*Prod *= arr1[i][j];
 			}();
+
+		cilk_spawn[&Prod, &t3, &t4, &_threads, arr1, this]() {
+			if (_threads>2)
+				for (long i = t3; i < t4; i++)
+					for (long j = 0; j < this->m; j++)
+						*Prod *= arr1[i][j];
+		}();
+
+		cilk_spawn[&Prod, &t4, &t5, &_threads, arr1, this]() {
+			if (_threads>3)
+				for (long i = t4; i < t5; i++)
+					for (long j = 0; j < this->m; j++)
+						*Prod *= arr1[i][j];
+		}();
+
+		for (long i = t1; i < t2; i++)
+			for (long j = 0; j < this->m; j++)
+				*Prod *= arr1[i][j];
+
 		cilk_sync;
 		return Prod.get_value();
 	}
@@ -685,7 +785,7 @@ private:
 	Type MulCilkVec()
 	{
 		Type Prod = 1;
-		Prod = __sec_reduce_mul(arr[0:n][0:m]);
+		Prod = __sec_reduce_mul(arr[0:this->n][0:this->m]);
 		return Prod;
 	}
 
@@ -693,8 +793,8 @@ private:
 	Type MulCilkForVec()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
-		cilk_for(long i = 0; i < n; i++)
-			*Prod *= __sec_reduce_mul(arr[i][0:m]);
+		cilk_for(long i = 0; i < this->n; i++)
+			*Prod *= __sec_reduce_mul(this->arr[i][0:this->m]);
 		return Prod.get_value();
 	}
 #pragma endregion
@@ -708,11 +808,12 @@ private:
 		if (m != M.m || n != M.n)
 			throw new exception("ћатрицы разной размерности");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
+		Type **arr1 = this->arr, **arr2 = M.arr;
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 			{
-					m1 = (m1 < arr[i][j]) ? arr[i][j] : m1;;
-					m2 = (m2 < M.arr[i][j]) ? arr[i][j] : m2;
+					m1 = (m1 < arr1[i][j]) ? arr1[i][j] : m1;;
+					m2 = (m2 < arr2[i][j]) ? arr2[i][j] : m2;
 			}
 		return MaxOf(m1, m2);
 	}
@@ -723,12 +824,13 @@ private:
 		if (m != M.m || n != M.n)
 			throw new exception("ћатрицы разной размерности");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
+		Type **arr1 = this->arr, **arr2 = M.arr;
 		#pragma omp parallel for reduction(max:m1, m2) shared(arr, M)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 			{
-				m1 = (m1 < arr[i][j]) ? arr[i][j] : m1;;
-				m2 = (m2 < M.arr[i][j]) ? M.arr[i][j] : m2;
+				m1 = (m1 < arr1[i][j]) ? arr1[i][j] : m1;;
+				m2 = (m2 < arr2[i][j]) ? arr2[i][j] : m2;
 			}
 		return MaxOf(m1, m2);
 	}
@@ -745,15 +847,16 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections reduction(max:m1, m2) shared(arr) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		#pragma omp parallel sections reduction(max:m1, m2) shared(arr1, arr2) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -763,8 +866,8 @@ private:
 				for (long i = t2; i < t3; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -775,8 +878,8 @@ private:
 				for (long i = t3; i < t4; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -787,8 +890,8 @@ private:
 				for (long i = t4; i < t4 + step; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -803,34 +906,46 @@ private:
 			throw new exception("ћатрицы разной размерности");
 		cilk::reducer<cilk::op_max<Type>> m1(arr[0][0]);
 		cilk::reducer<cilk::op_max<Type>> m2(M.arr[0][0]);
+		Type **arr1 = this->arr, **arr2 = M.arr;
 		cilk_for(long i = 0; i < n; i++)
 		{
 			for (long j = 0; j < m; j++)
 			{
-				m1->calc_max(arr[i][j]);
-				m2->calc_max(M.arr[i][j]);
+				m1->calc_max(arr1[i][j]);
+			}
+		}
+		cilk_for(long i = 0; i < n; i++)
+		{
+			for (long j = 0; j < m; j++)
+			{
+				m2->calc_max(arr2[i][j]);
 			}
 		}
 		return MaxOf(m1.get_value(), m2.get_value());
 	}
 
 	// Ќахождение максимального элемента двух матриц со спавном веток
-	Type MaxCilkSpawn(Matrix<Type> &M)
+	Type MaxCilkSpawn(Matrix<Type> &M, int _threads)
 	{
 		if (m != M.m || n != M.n)
 			throw new exception("ћатрицы разной размерности");
-		cilk::reducer<cilk::op_max<Type>> m1(arr[0][0]);
-		cilk::reducer<cilk::op_max<Type>> m2(M.arr[0][0]);
-		for (long i = 0; i < n; i++)
-			cilk_spawn[&m1, &m2, &M, i, this]() {
-				for (long j = 0; j < m; j++)
-				{
-					m1->calc_max(arr[i][j]);
-					m2->calc_max(M.arr[i][j]);
-				}
+		Type m1 = arr[0][0];
+		Type m2 = M.arr[0][0];
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		arr1 = this->arr;
+		arr2 = M.arr;
+		cilk_spawn[&m1, &arr1, this]() {
+			for (long i = 0; i < this->n; i++)
+				for (long j = 0; j < this->m; j++)
+					m1 = (m1 < arr1[i][j]) ? arr1[i][j] : m1;
 			}();
+
+		for (long i = 0; i < n; i++)
+			for (long j = 0; j < m; j++)
+				m2 = (m2 < arr2[i][j]) ? arr2[i][j] : m2;
 		cilk_sync;
-		return MaxOf(m1.get_value(), m2.get_value());
+
+		return MaxOf(m1, m2);
 	}
 	
 	// Ќахождение максимального элемента двух матриц с векторизацией
@@ -840,9 +955,11 @@ private:
 			throw new exception("ћатрицы разной размерности");
 		Type m1 = arr[0][0];
 		Type m2 = M.arr[0][0];
-
-		m1 = __sec_reduce_max(arr[0:n][0:m]);
-		m2 = __sec_reduce_max(M.arr[0:n][0:m]);
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		arr1 = this->arr;
+		arr2 = M.arr;
+		m1 = __sec_reduce_max(arr1[0:this->n][0:this->m]);
+		m2 = __sec_reduce_max(arr2[0:this->n][0:this->m]);
 
 		return MaxOf(m1, m2);
 	}
@@ -854,10 +971,11 @@ private:
 			throw new exception("ћатрицы разной размерности");
 		Type m1 = arr[0][0];
 		Type m2 = M.arr[0][0];
-		cilk_for(long i = 0; i < n; i++)
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		cilk_for(long i = 0; i < this->n; i++)
 		{
-			m1 = __sec_reduce_max(arr[i][0:m]);
-			m2 = __sec_reduce_max(M.arr[i][0:m]);
+			m1 = __sec_reduce_max(arr1[i][0: this->m]);
+			m2 = __sec_reduce_max(arr2[i][0: this->m]);
 		}
 		return MaxOf(m1, m2);
 	}
@@ -986,16 +1104,11 @@ private:
 
 #pragma endregion
 
-	void fillMatrix(Filler<Type> func)
+	void fillMatrix(fillF func)
 	{
-		Type t = 0;
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
-			{
-				t = func((i + 1), (j + 1));
-				arr[i][j] = t;
-
-			}
+				arr[i][j] = func((i + 1), (j + 1));
 	}
 
 	Matrix(long _n, long _m, Type**& arr1)
@@ -1018,6 +1131,8 @@ private:
 			if (alloc)
 				arr[i] = new Type[m];
 			//memcpy(arr[i], arr1[i], m * sizeof(double*)*sizeof(double));
+			//memcpy(this->arr[i], arr1[i], m * sizeof(Type));
+			
 			for (long j = 0; j < m; j++)
 			{
 				//arr[i][j] = new double[1];
@@ -1050,11 +1165,10 @@ private:
 template<class Type>
 Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
 	//__cilkrts_end_cilk();
-	__cilkrts_init();
-	int t = __cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	//cout << t << " = " << __cilkrts_get_nworkers();
+	//__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
+	//__cilkrts_init();
+	//omp_set_num_threads(_threads);
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1079,7 +1193,7 @@ Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 	}
 	case Method::Cilk_spawn:
 	{
-		return SumCilkSpawn();
+		return SumCilkSpawn(_threads);
 	}
 	case Method::Cilk_for_index:
 	{
@@ -1097,9 +1211,6 @@ Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 template<class Type>
 Matrix<Type> Matrix<Type>::Add(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1124,7 +1235,7 @@ Matrix<Type> Matrix<Type>::Add(Matrix<Type> &M, Method m = Method::Sequence, int
 	}
 	case Method::Cilk_spawn:
 	{
-		return AddCilkSpawn(M);
+		return AddCilkSpawn(M, _threads);
 	}
 	case Method::Cilk_for_index:
 	{
@@ -1142,8 +1253,6 @@ Matrix<Type> Matrix<Type>::Add(Matrix<Type> &M, Method m = Method::Sequence, int
 template<class Type>
 Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	int t = __cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1168,7 +1277,7 @@ Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 	}
 	case Method::Cilk_spawn:
 	{
-		return MulCilkSpawn();
+		return MulCilkSpawn(_threads);
 	}
 	case Method::Cilk_for_index:
 	{
@@ -1188,9 +1297,6 @@ Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 template<class Type>
 Matrix<Type> Matrix<Type>::Sub(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1233,9 +1339,6 @@ Matrix<Type> Matrix<Type>::Sub(Matrix<Type> &M, Method m = Method::Sequence, int
 template<class Type>
 Type Matrix<Type>::Max(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1260,7 +1363,7 @@ Type Matrix<Type>::Max(Matrix<Type> &M, Method m = Method::Sequence, int _thread
 	}
 	case Method::Cilk_spawn:
 	{
-		return MaxCilkSpawn(M);
+		return MaxCilkSpawn(M, _threads);
 	}
 	case Method::Cilk_for_index:
 	{
