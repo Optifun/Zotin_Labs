@@ -1,4 +1,4 @@
-#pragma once 
+п»ї#pragma once 
 #include <iostream>
 #include <math.h>
 #include <omp.h>
@@ -10,7 +10,7 @@
 #include <cilk/reducer_opmul.h>
 using namespace std;
 
-//Сигнатура [](long, long)->double {return ...;}
+//РЎРёРіРЅР°С‚СѓСЂР° [](long, long)->double {return ...;}
 typedef double(*fillF)(long, long);
 #define MaxOf(a, b) ((a)< (b)) ? (b) : (a)
 
@@ -39,62 +39,62 @@ private:
 	fillF generator;
 };
 
-// Метод параллелизации алгоритма
+// РњРµС‚РѕРґ РїР°СЂР°Р»Р»РµР»РёР·Р°С†РёРё Р°Р»РіРѕСЂРёС‚РјР°
 enum Method {
-	//Последовательный вариант
+	//РџРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹Р№ РІР°СЂРёР°РЅС‚
 	Sequence,
-	//Параллельный цикл на ОМП
+	//РџР°СЂР°Р»Р»РµР»СЊРЅС‹Р№ С†РёРєР» РЅР° РћРњРџ
 	ParallelFor,
-	//Параллельные секции на ОМП
+	//РџР°СЂР°Р»Р»РµР»СЊРЅС‹Рµ СЃРµРєС†РёРё РЅР° РћРњРџ
 	ParallelSections,
-	//Параллельный цикл на Силке
+	//РџР°СЂР°Р»Р»РµР»СЊРЅС‹Р№ С†РёРєР» РЅР° РЎРёР»РєРµ
 	Cilk_for,
-	//Спавн параллельных веток на Силке
+	//РЎРїР°РІРЅ РїР°СЂР°Р»Р»РµР»СЊРЅС‹С… РІРµС‚РѕРє РЅР° РЎРёР»РєРµ
 	Cilk_spawn,
-	//Индексная нотация(векторизация) на Силке
+	//РРЅРґРµРєСЃРЅР°СЏ РЅРѕС‚Р°С†РёСЏ(РІРµРєС‚РѕСЂРёР·Р°С†РёСЏ) РЅР° РЎРёР»РєРµ
 	Cilk_index,
-	//Параллельный цикл + векторизация на Силке
+	//РџР°СЂР°Р»Р»РµР»СЊРЅС‹Р№ С†РёРєР» + РІРµРєС‚РѕСЂРёР·Р°С†РёСЏ РЅР° РЎРёР»РєРµ
 	Cilk_for_index};
 
-//Класс матрицы
+//РљР»Р°СЃСЃ РјР°С‚СЂРёС†С‹
 template<class Type>
 class Matrix
 {
 public:
 
-	//Количество созданных матриц за время выполнения программы
+	//РљРѕР»РёС‡РµСЃС‚РІРѕ СЃРѕР·РґР°РЅРЅС‹С… РјР°С‚СЂРёС† Р·Р° РІСЂРµРјСЏ РІС‹РїРѕР»РЅРµРЅРёСЏ РїСЂРѕРіСЂР°РјРјС‹
 	static long Created;
 	
-	//Количество удаленных матриц за время выполнения программы
+	//РљРѕР»РёС‡РµСЃС‚РІРѕ СѓРґР°Р»РµРЅРЅС‹С… РјР°С‚СЂРёС† Р·Р° РІСЂРµРјСЏ РІС‹РїРѕР»РЅРµРЅРёСЏ РїСЂРѕРіСЂР°РјРјС‹
 	static long Destroed;
 	
-	//Включение режима отладки
-	//Нумерует каждую созданную матрицу и выводит сообщения о создании и удалении каждой матрицы
+	//Р’РєР»СЋС‡РµРЅРёРµ СЂРµР¶РёРјР° РѕС‚Р»Р°РґРєРё
+	//РќСѓРјРµСЂСѓРµС‚ РєР°Р¶РґСѓСЋ СЃРѕР·РґР°РЅРЅСѓСЋ РјР°С‚СЂРёС†Сѓ Рё РІС‹РІРѕРґРёС‚ СЃРѕРѕР±С‰РµРЅРёСЏ Рѕ СЃРѕР·РґР°РЅРёРё Рё СѓРґР°Р»РµРЅРёРё РєР°Р¶РґРѕР№ РјР°С‚СЂРёС†С‹
 	static bool DEBUG;
 
-//Конструкторы матриц
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂС‹ РјР°С‚СЂРёС†
 #pragma region Constructors
 
-	//Возвращает матрицу размерностью NxM заполненную единицами
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РјР°С‚СЂРёС†Сѓ СЂР°Р·РјРµСЂРЅРѕСЃС‚СЊСЋ NxM Р·Р°РїРѕР»РЅРµРЅРЅСѓСЋ РµРґРёРЅРёС†Р°РјРё
 	static Matrix<Type> Ones(long _n, long _m)
 	{
-		return Matrix<Type>(_n, _m, Filler<Type>([](long, long)->double {return 1; }));
+		return Matrix<Type>(_n, _m, [](long, long)->double {return 1; });
 	}
 	
-	//Возвращает матрицу размерностью NxM заполненную нулями
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РјР°С‚СЂРёС†Сѓ СЂР°Р·РјРµСЂРЅРѕСЃС‚СЊСЋ NxM Р·Р°РїРѕР»РЅРµРЅРЅСѓСЋ РЅСѓР»СЏРјРё
 	static Matrix<Type> Zeros(long _n, long _m)
 	{
-		return Matrix<Type>(_n, _m, Filler<Type>([](long, long)->double {return 0; }));
+		return Matrix<Type>(_n, _m, [](long, long)->double {return 0; });
 	}
 	
-	//Возвращает единичную матрицу размерностью NxM
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РµРґРёРЅРёС‡РЅСѓСЋ РјР°С‚СЂРёС†Сѓ СЂР°Р·РјРµСЂРЅРѕСЃС‚СЊСЋ NxM
 	static Matrix<Type> E(long _n, long _m)
 	{
 		auto t = min(_n, _m);
-		return Matrix<Type>(t, t, Filler<Type>([](long x, long y)->double {return (x == y) ? 1 : 0; }));
+		return Matrix<Type>(t, t, [](long x, long y)->double {return (x == y) ? 1 : 0; });
 	}
 
-	//Возвращает матрицу размерностью 1х1 с элементом равным нулю
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РјР°С‚СЂРёС†Сѓ СЂР°Р·РјРµСЂРЅРѕСЃС‚СЊСЋ 1С…1 СЃ СЌР»РµРјРµРЅС‚РѕРј СЂР°РІРЅС‹Рј РЅСѓР»СЋ
 	Matrix()
 	{
 		num = Created;
@@ -107,7 +107,7 @@ public:
 		arr[0][0] = 0;
 	}
 
-	//Возвращает матрицу размерностью NxM заполненную нулями
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РјР°С‚СЂРёС†Сѓ СЂР°Р·РјРµСЂРЅРѕСЃС‚СЊСЋ NxM Р·Р°РїРѕР»РЅРµРЅРЅСѓСЋ РЅСѓР»СЏРјРё
 	Matrix(long _n, long _m)
 	{
 		num = Created;
@@ -117,10 +117,10 @@ public:
 		n = _n;
 		m = _m;
 		arr = allocateArr(n, m);
-		fillMatrix(Filler<Type>([](long, long) ->double { return 0; }));
+		fillMatrix([](long, long) ->double { return 0; });
 	}
 
-	//Возвращает копию матрицы
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РєРѕРїРёСЋ РјР°С‚СЂРёС†С‹
 	Matrix(Matrix<Type>& M)
 	{
 		num = Created;
@@ -132,8 +132,8 @@ public:
 		copyArr(M.arr, true);
 	}
 
-	//Возвращает матрицу размерностью NxM, элементы которой заполнены используя функцию сигнатуры fillF
-	Matrix(long _n, long _m, Filler<Type> filler)
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ РјР°С‚СЂРёС†Сѓ СЂР°Р·РјРµСЂРЅРѕСЃС‚СЊСЋ NxM, СЌР»РµРјРµРЅС‚С‹ РєРѕС‚РѕСЂРѕР№ Р·Р°РїРѕР»РЅРµРЅС‹ РёСЃРїРѕР»СЊР·СѓСЏ С„СѓРЅРєС†РёСЋ СЃРёРіРЅР°С‚СѓСЂС‹ fillF
+	Matrix(long _n, long _m, fillF filler)
 	{
 		num = Created;
 		if (DEBUG)
@@ -145,7 +145,7 @@ public:
 		fillMatrix(filler);
 	}
 
-	//Высвобождает всю выделенную матрицей память
+	//Р’С‹СЃРІРѕР±РѕР¶РґР°РµС‚ РІСЃСЋ РІС‹РґРµР»РµРЅРЅСѓСЋ РјР°С‚СЂРёС†РµР№ РїР°РјСЏС‚СЊ
 	~Matrix()
 	{
 		if (DEBUG)
@@ -158,7 +158,7 @@ public:
 			delete[] arr[i];
 		}
 		delete[] arr;
-		//cout << "Умир" << endl;
+		//cout << "РЈРјРёСЂ" << endl;
 	}
 
 	static void operator delete(void* mem, size_t length)
@@ -173,11 +173,11 @@ public:
 
 #pragma endregion
 
-// Обращения по индексу к матрице
+// РћР±СЂР°С‰РµРЅРёСЏ РїРѕ РёРЅРґРµРєСЃСѓ Рє РјР°С‚СЂРёС†Рµ
 #pragma region Selectors
 
 
-	//Возращает iю строку матрицы
+	//Р’РѕР·СЂР°С‰Р°РµС‚ iСЋ СЃС‚СЂРѕРєСѓ РјР°С‚СЂРёС†С‹
 	Type* getRow(long _i)
 	{
 		Type * arr1 = new Type[m];
@@ -186,7 +186,7 @@ public:
 		return arr1;
 	}
 
-	//Возращает jй столбец матрицы
+	//Р’РѕР·СЂР°С‰Р°РµС‚ jР№ СЃС‚РѕР»Р±РµС† РјР°С‚СЂРёС†С‹
 	Type* getCol(long _j)
 	{
 		Type * arr1 = new Type[n];
@@ -195,15 +195,15 @@ public:
 		return arr1;
 	}
 
-	//Возвращает элемент матрицы
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ СЌР»РµРјРµРЅС‚ РјР°С‚СЂРёС†С‹
 	Type* getElement(long i, long j)
 	{
 		if (i >= n || j >= m|| i<0 || j<0)
-			throw new exception("Индекс поиска больше размерности матрицы");
+			throw new exception("РРЅРґРµРєСЃ РїРѕРёСЃРєР° Р±РѕР»СЊС€Рµ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё РјР°С‚СЂРёС†С‹");
 		return &arr[i][j];
 	}
 
-	//Возвращает iю строку матрицы, представленную в виде столбца
+	//Р’РѕР·РІСЂР°С‰Р°РµС‚ iСЋ СЃС‚СЂРѕРєСѓ РјР°С‚СЂРёС†С‹, РїСЂРµРґСЃС‚Р°РІР»РµРЅРЅСѓСЋ РІ РІРёРґРµ СЃС‚РѕР»Р±С†Р°
 	Matrix<Type> operator[] (long i)
 	{
 		double **arr1;
@@ -246,7 +246,7 @@ public:
 
 	}
 
-	//Сравнение на равенство матриц
+	//РЎСЂР°РІРЅРµРЅРёРµ РЅР° СЂР°РІРµРЅСЃС‚РІРѕ РјР°С‚СЂРёС†
 	bool operator == (Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
@@ -260,14 +260,14 @@ public:
 
 #pragma endregion
 
-// Перемножение матриц
+// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС†
 #pragma region Multiplication
 
-	//Быстрое умножение матриц
+	//Р‘С‹СЃС‚СЂРѕРµ СѓРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС†
 	Matrix operator* (Matrix &_m)
 	{
 		if (m != _m.n)
-			throw new exception("Были умножены матрицы неверной размерности");
+			throw new exception("Р‘С‹Р»Рё СѓРјРЅРѕР¶РµРЅС‹ РјР°С‚СЂРёС†С‹ РЅРµРІРµСЂРЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix a = Matrix(n, _m.m);
 		Matrix M = _m.T();
 		for (long i = 0; i < a.n; i++)
@@ -287,19 +287,19 @@ public:
 
 #pragma endregion
 
-	// Сумма элементов матрицы
+	// РЎСѓРјРјР° СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†С‹
 	Type Sum(Method m = Method::Sequence, int _threads = 1);
 
-	// Сложение матриц
+	// РЎР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС†
 	Matrix<Type> Add(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1);
 	
-	// Разность матриц
+	// Р Р°Р·РЅРѕСЃС‚СЊ РјР°С‚СЂРёС†
 	Matrix<Type> Sub(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1);
 
-	// Умножение элементов матриц
+	// РЈРјРЅРѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†
 	Type Mul(Method m = Method::Sequence, int _threads = 1);
 
-	// Вычисление максимального элемента матриц
+	// Р’С‹С‡РёСЃР»РµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РјР°С‚СЂРёС†
 	Type Max(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1);
 
 
@@ -339,43 +339,45 @@ public:
 
 	}
 
-	//Количество строк матрицы
+	//РљРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚СЂРѕРє РјР°С‚СЂРёС†С‹
 	long N()
 	{
 		return n;
 	}
 
-	//Количество столбцов матрицы
+	//РљРѕР»РёС‡РµСЃС‚РІРѕ СЃС‚РѕР»Р±С†РѕРІ РјР°С‚СЂРёС†С‹
 	long M()
 	{
 		return m;
 	}
 
 private:
-//Сложение элементов матрицы
+//РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†С‹
 #pragma region Summation
-	// Последовательное сложение элементов матрицы
+	// РџРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕРµ СЃР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†С‹
 	Type SumSeq()
 	{
 		Type S = 0;
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				S += arr[i][j];
+		Type **arr1 = this->arr;
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
 		return S;
 	}
 
-	// Сложение элементов с параллельным циклом
+	// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј
 	Type SumOmpFor()
 	{
 		Type S = 0;
+		Type **arr1 = this->arr;
 		#pragma omp parallel for reduction(+:S)
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				S += arr[i][j];
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
 		return S;
 	}
 
-	// Сложение элементов с параллельными секциями
+	// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹РјРё СЃРµРєС†РёСЏРјРё
 	Type SumOmpSec(int _threads)
 	{
 		Type S = 0;
@@ -385,116 +387,151 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-#pragma omp parallel sections reduction(+:S) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr;
+#pragma omp parallel sections reduction(+:S) shared(arr1) firstprivate(t1, t2, t3, t4, step)
 		{
 #pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 #pragma omp section
 			{
 				if (_threads>1)
 				for (long i = t2; i < t3; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 #pragma omp section
 			{
 				if (_threads>2)
 				for (long i = t3; i < t4; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 #pragma omp section
 			{
 				if (_threads>3)
 				for (long i = t4; i < t4 + step; i++)
 					for (long j = 0; j < m; j++)
-						S += arr[i][j];
+						S += arr1[i][j];
 			}
 		}
 		return S;
 	}
-	// Сложение элементов с параллельным циклом на Силке
+
+	// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј РЅР° РЎРёР»РєРµ
 	Type SumCilkFor()
 	{
-		//редуктор на сложение равный нулю
+		//СЂРµРґСѓРєС‚РѕСЂ РЅР° СЃР»РѕР¶РµРЅРёРµ СЂР°РІРЅС‹Р№ РЅСѓР»СЋ
 		cilk::reducer_opadd<Type> S(0);
-		cilk_for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				S += arr[i][j];
+		Type **arr1 = this->arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
 		return S.get_value();
 	}
 
-	// Сложение элементов с векторизацией
+	// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ СЃ РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Type SumCilkVec()
 	{
 		Type S;
-		// прохожусь по i = 0:n, по j = 0:m, применяю редукцию на сложение
-		S = __sec_reduce_add(arr[0:n][0:m]);
+		// РїСЂРѕС…РѕР¶СѓСЃСЊ РїРѕ i = 0:n, РїРѕ j = 0:m, РїСЂРёРјРµРЅСЏСЋ СЂРµРґСѓРєС†РёСЋ РЅР° СЃР»РѕР¶РµРЅРёРµ
+		Type **arr1 = this->arr;
+		S = __sec_reduce_add(arr1[0:this->n][0:this->m]);
 		return S;
 	}
 
-	// Сложение элементов со спавном параллельных веток
-	Type SumCilkSpawn()
+	// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ СЃРѕ СЃРїР°РІРЅРѕРј РїР°СЂР°Р»Р»РµР»СЊРЅС‹С… РІРµС‚РѕРє
+	Type SumCilkSpawn(int _threads)
 	{
-		//редуктор на сложение равный нулю
+		//СЂРµРґСѓРєС‚РѕСЂ РЅР° СЃР»РѕР¶РµРЅРёРµ СЂР°РІРЅС‹Р№ РЅСѓР»СЋ
 		cilk::reducer_opadd<Type> S(0);
-		for (long i = 0; i < n; i++)
-		{
-			//Спав новой ветки
-			cilk_spawn [&S, i, this]() {
-				for (long j = 0; j < m; j++)
-					S += arr[i][j];
-			}();
-		}
-		cilk_sync; //синхронизирую ветки здесь
+		float step = n / _threads;
+		int mod = n % _threads;
+		int t1 = 0;
+		int t2 = step * 1 + mod;
+		int t3 = t2 + step;
+		int t4 = t3 + step;
+		int t5 = t4 + step;
+		Type **arr1 = this->arr;
+		cilk_spawn [&S, &t2, &t3, &_threads, &arr1, this]() {
+			if (_threads>1)
+			for (long i = t2; i < t3; i++)
+				for (long j = 0; j < this->m; j++)
+					S += arr1[i][j];
+		}();
+
+		cilk_spawn[&S, &t3, &t4, &_threads, &arr1, this]() {
+			if (_threads>2)
+				for (long i = t3; i < t4; i++)
+					for (long j = 0; j < this->m; j++)
+						S += arr1[i][j];
+		}();
+
+		cilk_spawn[&S, &t4, &t5, &_threads, &arr1, this]() {
+			if (_threads>3)
+				for (long i = t4; i < t5; i++)
+					for (long j = 0; j < this->m; j++)
+						S += arr1[i][j];
+		}();
+
+		for (long i = t1; i < t2; i++)
+			for (long j = 0; j < this->m; j++)
+				S += arr1[i][j];
+		
+
+		cilk_sync; //СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓСЋ РІРµС‚РєРё Р·РґРµСЃСЊ
 		return S.get_value();
 	}
-	// Сложение элементов с параллельным циклом и векторизацией
+
+	// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј Рё РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Type SumCilkForVec()
 	{
 		cilk::reducer_opadd<Type> S(0);
-		cilk_for (long i = 0; i < n; i++)
-			S += __sec_reduce_add(arr[i][0:m]);
+		Type **arr1 = this->arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			S += __sec_reduce_add(arr1[i][0:this->m]);
 		return S.get_value();
 	}
 #pragma endregion
 
-// Сложение двух матриц
+// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС†
 #pragma region Addition
 
-	//Обычное сложение матриц
+	//РћР±С‹С‡РЅРѕРµ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС†
 	Matrix<Type> AddSeq (Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				arr3[i][j] = arr1[i][j] + arr2[i][j];
 		return res;
 	}
-	// Сложение двух матриц с параллельным циклом
+
+	// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј
 	Matrix<Type> AddOmpFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)	
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		#pragma omp parallel for shared(res, arr, _m)
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		#pragma omp parallel for shared(arr1,arr2,arr3)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
-				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+				arr3[i][j] = arr1[i][j] + arr2[i][j];
 		return res;
 	}
 
-	//Сложение двух матриц с параллельными секциями
+	//РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹РјРё СЃРµРєС†РёСЏРјРё
 	Matrix<Type> AddOmpSec(Matrix<Type> &_m, int _threads)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		float step = n / _threads;
 		int mod = n % _threads;
@@ -502,242 +539,307 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections shared(res, arr, _m) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		#pragma omp parallel sections shared(arr1, arr2, arr3) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 			#pragma omp section
 			{
 				if (_threads>1)
 				for (long i = t2; i < t3; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 			#pragma omp section
 			{
 				if (_threads>2)
 				for (long i = t3; i < t4; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 			#pragma omp section
 			{
 				if (_threads>3)
 				for (long i = t4; i < t4 + step; i++)
 					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+						arr3[i][j] = arr1[i][j] + arr2[i][j];
 			}
 		}
 		return res;
 	}
 
-	// Сложение двух матриц с параллельным циклом на Силке
+	// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј РЅР° РЎРёР»РєРµ
 	Matrix<Type> AddCilkFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		cilk_for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				res.arr[i][j] = arr[i][j] + _m.arr[i][j];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				arr3[i][j] = arr1[i][j] + arr2[i][j];
 		return res;
 	}
 
-	// Сложение двух матриц со спавном веток
-	Matrix<Type> AddCilkSpawn(Matrix<Type> &_m)
+	// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС† СЃРѕ СЃРїР°РІРЅРѕРј РІРµС‚РѕРє
+	Matrix<Type> AddCilkSpawn(Matrix<Type> &_m, int _threads)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				cilk_spawn [&res, &_m, i, this]() {
-					for (long j = 0; j < m; j++)
-						res.arr[i][j] = arr[i][j] + _m.arr[i][j];
-				}();
+		float step = n / _threads;
+		int mod = n % _threads;
+		int t1 = 0;
+		int t2 = step * 1 + mod;
+		int t3 = t2 + step;
+		int t4 = t3 + step;
+		int t5 = t4 + step;
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+
+		cilk_spawn [&res, &_m, &t2, &t3, &_threads, &arr1, &arr2, &arr3, this]() {
+			if (_threads>1)
+			for (long i = t2; i < t3; i++)
+				for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+		}();
+
+		cilk_spawn[&res, &_m, &t3, &t4, &_threads, &arr1, &arr2, &arr3, this]() {
+			if (_threads>2)
+			for (long i = t3; i < t4; i++)
+				for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+		}();
+
+		cilk_spawn[&res, &_m, &t4, &t5, &_threads, &arr1, &arr2, &arr3, this]() {
+			if (_threads>3)
+			for (long i = t4; i < t5; i++)
+				for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+		}();
+
+		for (long i = t1; i < t2; i++)
+			for (long j = 0; j < this->m; j++)
+					arr3[i][j] = arr1[i][j] + arr2[i][j];
+
 		cilk_sync;
 		return res;
 	}
 
-	// Сложение двух матриц с векторизацией
+	// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС† СЃ РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Matrix<Type> AddCilkVec(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		res.arr[0:n][0:m] = arr[0:n][0:m] + _m.arr[0:n][0:m];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		res.arr[0:this->n][0:this->m] = arr[0:this->n][0:this->m] + _m.arr[0:this->n][0:this->m];
 		return res;
 	}
 
-	// Сложение двух матриц с параллельным циклом и векторизацией
+	// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј Рё РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Matrix<Type> AddCilkForVec(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		cilk_for(long i = 0; i < n; i++)
-				res.arr[i][0:m] = arr[i][0:m] + _m.arr[i][0:m];
+		Type **arr1 = this->arr, **arr2 = _m.arr, **arr3 = res.arr;
+		cilk_for(long i = 0; i < this->n; i++)
+				arr3[i][0:this->m] = arr1[i][0:this->m] + arr2[i][0:this->m];
 		return res;
 	}
 
 #pragma endregion
 
-// Перемножение элементов матрицы
+// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†С‹
 #pragma region Multiplication
 
-	// Последовательное перемножение матриц
+	// РџРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕРµ РїРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС†
 	Type MulSeq()
 	{
 		Type Prod = 1;
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				Prod *= arr[i][j];
+		Type **arr1 = this->arr;
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				Prod *= arr1[i][j];
 		return Prod;
 	}
 
-	// Перемножение матриц с параллельным циклом
+	// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј
 	Type MulOmpFor()
 	{
 		Type Prod = 1;
-		#pragma omp parallel for reduction(*:Prod)
-		for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				Prod *= arr[i][j];
+		Type **arr1 = this->arr;
+		#pragma omp parallel for reduction(*:Prod) shared(arr1)
+		for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				Prod *= arr1[i][j];
 		return Prod;
 	}
 
-	// Перемножение матриц с параллельными секциями
+	// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹РјРё СЃРµРєС†РёСЏРјРё
 	Type MulOmpSec(int _threads)
 	{
 		Type Prod = 1;
-		float step = n / _threads;
-		int mod = n % _threads;
+		float step = this->n / _threads;
+		int mod = this->n % _threads;
 		int t1 = 0;
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections reduction(*:Prod) shared(arr) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr;
+		#pragma omp parallel sections reduction(*:Prod) shared(arr1) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 			#pragma omp section
 			{
 				if (_threads>1)
 				for (long i = t2; i < t3; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 			#pragma omp section
 			{
 				if (_threads>2)
 				for (long i = t3; i < t4; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 			#pragma omp section
 			{
 				if (_threads>3)
 				for (long i = t4; i < t4 + step; i++)
-					for (long j = 0; j < m; j++)
-						Prod *= arr[i][j];
+					for (long j = 0; j < this->m; j++)
+						Prod *= arr1[i][j];
 			}
 
 		}
 		return Prod;
 	}
 
-	// Перемножение матриц с параллельным циклом на Силке
+	// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј РЅР° РЎРёР»РєРµ
 	Type MulCilkFor()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
-		//Type Prod = 1;
-		cilk_for (long i = 0; i < n; i++)
-			for (long j = 0; j < m; j++)
-				*Prod *= arr[i][j];
+		Type **arr1 = this->arr;
+		cilk_for (long i = 0; i < this->n; i++)
+			for (long j = 0; j < this->m; j++)
+				*Prod *= arr1[i][j];
 		return Prod.get_value();
 	}
 
-	// Перемножение матриц со спавном новых веток
-	Type MulCilkSpawn()
+	// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЃРѕ СЃРїР°РІРЅРѕРј РЅРѕРІС‹С… РІРµС‚РѕРє
+	Type MulCilkSpawn(int _threads)
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
-		for (long i = 0; i < n; i++)
-			cilk_spawn[&Prod, i, this]() {
-				for (long j = 0; j < m; j++)
-					*Prod *= arr[i][j];
+		float step = this->n / _threads;
+		int mod = this->n % _threads;
+		int t1 = 0;
+		int t2 = step * 1 + mod;
+		int t3 = t2 + step;
+		int t4 = t3 + step;
+		int t5 = t4 + step;
+		Type **arr1 = this->arr;
+		cilk_spawn[&Prod, &t2, &t3, &_threads, arr1, this]() {
+			if (_threads>1)
+			for (long i = t2; i < t3; i++)
+				for (long j = 0; j < this->m; j++)
+					*Prod *= arr1[i][j];
 			}();
+
+		cilk_spawn[&Prod, &t3, &t4, &_threads, arr1, this]() {
+			if (_threads>2)
+				for (long i = t3; i < t4; i++)
+					for (long j = 0; j < this->m; j++)
+						*Prod *= arr1[i][j];
+		}();
+
+		cilk_spawn[&Prod, &t4, &t5, &_threads, arr1, this]() {
+			if (_threads>3)
+				for (long i = t4; i < t5; i++)
+					for (long j = 0; j < this->m; j++)
+						*Prod *= arr1[i][j];
+		}();
+
+		for (long i = t1; i < t2; i++)
+			for (long j = 0; j < this->m; j++)
+				*Prod *= arr1[i][j];
+
 		cilk_sync;
 		return Prod.get_value();
 	}
 
-	// Перемножение матриц с векторизацией
+	// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЃ РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Type MulCilkVec()
 	{
 		Type Prod = 1;
-		Prod = __sec_reduce_mul(arr[0:n][0:m]);
+		Prod = __sec_reduce_mul(arr[0:this->n][0:this->m]);
 		return Prod;
 	}
 
-	// Перемножение матриц с параллельным циклом и векторизацией
+	// РџРµСЂРµРјРЅРѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј Рё РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Type MulCilkForVec()
 	{
 		cilk::reducer<cilk::op_mul<Type>> Prod(1);
-		cilk_for(long i = 0; i < n; i++)
-			*Prod *= __sec_reduce_mul(arr[i][0:m]);
+		cilk_for(long i = 0; i < this->n; i++)
+			*Prod *= __sec_reduce_mul(this->arr[i][0:this->m]);
 		return Prod.get_value();
 	}
 #pragma endregion
 
-// Поиск максимального элемента двух матриц
+// РџРѕРёСЃРє РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС†
 #pragma region Maximum
 
-	// Нахождение максимального элемента двух матриц
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС†
 	Type MaxSeq(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
+		Type **arr1 = this->arr, **arr2 = M.arr;
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 			{
-					m1 = (m1 < arr[i][j]) ? arr[i][j] : m1;;
-					m2 = (m2 < M.arr[i][j]) ? arr[i][j] : m2;
+					m1 = (m1 < arr1[i][j]) ? arr1[i][j] : m1;;
+					m2 = (m2 < arr2[i][j]) ? arr2[i][j] : m2;
 			}
 		return MaxOf(m1, m2);
 	}
 
-	// Нахождение максимального элемента двух матриц с параллельным циклом
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј
 	Type MaxOmpFor(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
-		#pragma omp parallel for shared(m1, m2, arr, M)
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		#pragma omp parallel for reduction(max:m1, m2) shared(arr, M)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 			{
-				m1 = (m1 < arr[i][j]) ? arr[i][j] : m1;;
-				m2 = (m2 < M.arr[i][j]) ? M.arr[i][j] : m2;
+				m1 = (m1 < arr1[i][j]) ? arr1[i][j] : m1;;
+				m2 = (m2 < arr2[i][j]) ? arr2[i][j] : m2;
 			}
 		return MaxOf(m1, m2);
 	}
 
-	// Нахождение максимального элемента двух матриц с параллельными секциями
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹РјРё СЃРµРєС†РёСЏРјРё
 	Type MaxOmpSec(Matrix<Type> &M, int _threads)
 	{
 		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
 		float step = n / _threads;
 		int mod = n % _threads;
@@ -745,15 +847,16 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections reduction(max:m1, m2) shared(arr) firstprivate(t1, t2, t3, t4, step)
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		#pragma omp parallel sections reduction(max:m1, m2) shared(arr1, arr2) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
 				for (long i = t1; i < t2; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -763,8 +866,8 @@ private:
 				for (long i = t2; i < t3; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -775,8 +878,8 @@ private:
 				for (long i = t3; i < t4; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -787,8 +890,8 @@ private:
 				for (long i = t4; i < t4 + step; i++)
 					for (long j = 0; j < m; j++)
 					{
-						m1 = MaxOf(m1, arr[i][j]);
-						m2 = MaxOf(m2, M.arr[i][j]);
+						m1 = MaxOf(m1, arr1[i][j]);
+						m2 = MaxOf(m2, arr2[i][j]);
 					}
 
 			}
@@ -796,68 +899,83 @@ private:
 		return MaxOf(m1, m2);
 	}
 
-	// Нахождение максимального элемента двух матриц с параллельным циклом на силке
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј РЅР° СЃРёР»РєРµ
 	Type MaxCilkFor(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		cilk::reducer<cilk::op_max<Type>> m1(arr[0][0]);
 		cilk::reducer<cilk::op_max<Type>> m2(M.arr[0][0]);
+		Type **arr1 = this->arr, **arr2 = M.arr;
 		cilk_for(long i = 0; i < n; i++)
 		{
 			for (long j = 0; j < m; j++)
 			{
-				m1->calc_max(arr[i][j]);
-				m2->calc_max(M.arr[i][j]);
+				m1->calc_max(arr1[i][j]);
+			}
+		}
+		cilk_for(long i = 0; i < n; i++)
+		{
+			for (long j = 0; j < m; j++)
+			{
+				m2->calc_max(arr2[i][j]);
 			}
 		}
 		return MaxOf(m1.get_value(), m2.get_value());
 	}
 
-	// Нахождение максимального элемента двух матриц со спавном веток
-	Type MaxCilkSpawn(Matrix<Type> &M)
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС† СЃРѕ СЃРїР°РІРЅРѕРј РІРµС‚РѕРє
+	Type MaxCilkSpawn(Matrix<Type> &M, int _threads)
 	{
 		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
-		cilk::reducer<cilk::op_max<Type>> m1(arr[0][0]);
-		cilk::reducer<cilk::op_max<Type>> m2(M.arr[0][0]);
-		for (long i = 0; i < n; i++)
-			cilk_spawn[&m1, &m2, &M, i, this]() {
-				for (long j = 0; j < m; j++)
-				{
-					m1->calc_max(arr[i][j]);
-					m2->calc_max(M.arr[i][j]);
-				}
-			}();
-		cilk_sync;
-		return MaxOf(m1.get_value(), m2.get_value());
-	}
-	
-	// Нахождение максимального элемента двух матриц с векторизацией
-	Type MaxCilkVec(Matrix<Type> &M)
-	{
-		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Type m1 = arr[0][0];
 		Type m2 = M.arr[0][0];
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		arr1 = this->arr;
+		arr2 = M.arr;
+		cilk_spawn[&m1, &arr1, this]() {
+			for (long i = 0; i < this->n; i++)
+				for (long j = 0; j < this->m; j++)
+					m1 = (m1 < arr1[i][j]) ? arr1[i][j] : m1;
+			}();
 
-		m1 = __sec_reduce_max(arr[0:n][0:m]);
-		m2 = __sec_reduce_max(M.arr[0:n][0:m]);
+		for (long i = 0; i < n; i++)
+			for (long j = 0; j < m; j++)
+				m2 = (m2 < arr2[i][j]) ? arr2[i][j] : m2;
+		cilk_sync;
 
 		return MaxOf(m1, m2);
 	}
 	
-	// Нахождение максимального элемента двух матриц с параллельным циклом и векторизацией
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС† СЃ РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
+	Type MaxCilkVec(Matrix<Type> &M)
+	{
+		if (m != M.m || n != M.n)
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
+		Type m1 = arr[0][0];
+		Type m2 = M.arr[0][0];
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		arr1 = this->arr;
+		arr2 = M.arr;
+		m1 = __sec_reduce_max(arr1[0:this->n][0:this->m]);
+		m2 = __sec_reduce_max(arr2[0:this->n][0:this->m]);
+
+		return MaxOf(m1, m2);
+	}
+	
+	// РќР°С…РѕР¶РґРµРЅРёРµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р° РґРІСѓС… РјР°С‚СЂРёС† СЃ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј С†РёРєР»РѕРј Рё РІРµРєС‚РѕСЂРёР·Р°С†РёРµР№
 	Type MaxCilkForVec(Matrix<Type> &M)
 	{
 		if (m != M.m || n != M.n)
-			throw new exception("Матрицы разной размерности");
+			throw new exception("РњР°С‚СЂРёС†С‹ СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Type m1 = arr[0][0];
 		Type m2 = M.arr[0][0];
-		cilk_for(long i = 0; i < n; i++)
+		Type **arr1 = this->arr, **arr2 = M.arr;
+		cilk_for(long i = 0; i < this->n; i++)
 		{
-			m1 = __sec_reduce_max(arr[i][0:m]);
-			m2 = __sec_reduce_max(M.arr[i][0:m]);
+			m1 = __sec_reduce_max(arr1[i][0: this->m]);
+			m2 = __sec_reduce_max(arr2[i][0: this->m]);
 		}
 		return MaxOf(m1, m2);
 	}
@@ -865,15 +983,15 @@ private:
 #pragma endregion
 
 //
-// не знаю зачем написал, засоряю код
+// РЅРµ Р·РЅР°СЋ Р·Р°С‡РµРј РЅР°РїРёСЃР°Р», Р·Р°СЃРѕСЂСЏСЋ РєРѕРґ
 //
-// Разность двух матриц
+// Р Р°Р·РЅРѕСЃС‚СЊ РґРІСѓС… РјР°С‚СЂРёС†
 #pragma region Substraction
-	//Обычное вычитание матриц
+	//РћР±С‹С‡РЅРѕРµ РІС‹С‡РёС‚Р°РЅРёРµ РјР°С‚СЂРёС†
 	Matrix<Type> SubSeq(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
@@ -884,7 +1002,7 @@ private:
 	Matrix<Type> SubOmpFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		#pragma omp parallel for shared(res, arr, _m)
 		for (long i = 0; i < n; i++)
@@ -896,7 +1014,7 @@ private:
 	Matrix<Type> SubOmpSec(Matrix<Type> &_m, int _threads)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		float step = n / _threads;
 		int mod = n % _threads;
@@ -940,18 +1058,19 @@ private:
 	Matrix<Type> SubCilkFor(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		cilk_for(long i = 0; i < n; i++)
+		cilk_for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 				res.arr[i][j] = arr[i][j] - _m.arr[i][j];
+		cilk_sync;
 		return res;
 	}
 
 	Matrix<Type> SubCilkSpawn(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
@@ -966,7 +1085,7 @@ private:
 	Matrix<Type> SubCilkVec(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		res.arr[0:n][0:m] = arr[0:n][0:m] - _m.arr[0:n][0:m];
 		return res;
@@ -975,25 +1094,21 @@ private:
 	Matrix<Type> SubCilkForVec(Matrix<Type> &_m)
 	{
 		if (m != _m.m || n != _m.n)
-			throw new exception("Недопустимо сложение матриц разной размерности");
+			throw new exception("РќРµРґРѕРїСѓСЃС‚РёРјРѕ СЃР»РѕР¶РµРЅРёРµ РјР°С‚СЂРёС† СЂР°Р·РЅРѕР№ СЂР°Р·РјРµСЂРЅРѕСЃС‚Рё");
 		Matrix<Type> res = Matrix<Type>(n, m);
 		cilk_for(long i = 0; i < n; i++)
 			res.arr[i][0:m] = arr[i][0:m] + _m.arr[i][0:m];
+		cilk_sync;
 		return res;
 	}
 
 #pragma endregion
 
-	void fillMatrix(Filler<Type> func)
+	void fillMatrix(fillF func)
 	{
-		Type t = 0;
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
-			{
-				t = func((i + 1), (j + 1));
-				arr[i][j] = t;
-
-			}
+				arr[i][j] = func((i + 1), (j + 1));
 	}
 
 	Matrix(long _n, long _m, Type**& arr1)
@@ -1016,6 +1131,8 @@ private:
 			if (alloc)
 				arr[i] = new Type[m];
 			//memcpy(arr[i], arr1[i], m * sizeof(double*)*sizeof(double));
+			//memcpy(this->arr[i], arr1[i], m * sizeof(Type));
+			
 			for (long j = 0; j < m; j++)
 			{
 				//arr[i][j] = new double[1];
@@ -1038,19 +1155,20 @@ private:
 
 	long n;
 	long m;
-	long num; // порядковый номер матрицы
+	long num; // РїРѕСЂСЏРґРєРѕРІС‹Р№ РЅРѕРјРµСЂ РјР°С‚СЂРёС†С‹
 	Type **arr;
 };
 
 
-// Сложение элементов матрицы
+// РЎР»РѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†С‹
 #pragma region Summation
 template<class Type>
 Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
+	//__cilkrts_end_cilk();
+	//__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
+	//__cilkrts_init();
+	//omp_set_num_threads(_threads);
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1075,7 +1193,7 @@ Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 	}
 	case Method::Cilk_spawn:
 	{
-		return SumCilkSpawn();
+		return SumCilkSpawn(_threads);
 	}
 	case Method::Cilk_for_index:
 	{
@@ -1088,14 +1206,11 @@ Type Matrix<Type>::Sum(Method m = Method::Sequence, int _threads = 1)
 
 #pragma endregion
 
-// Сложение двух матриц
+// РЎР»РѕР¶РµРЅРёРµ РґРІСѓС… РјР°С‚СЂРёС†
 #pragma region Addition
 template<class Type>
 Matrix<Type> Matrix<Type>::Add(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1120,7 +1235,7 @@ Matrix<Type> Matrix<Type>::Add(Matrix<Type> &M, Method m = Method::Sequence, int
 	}
 	case Method::Cilk_spawn:
 	{
-		return AddCilkSpawn(M);
+		return AddCilkSpawn(M, _threads);
 	}
 	case Method::Cilk_for_index:
 	{
@@ -1133,14 +1248,11 @@ Matrix<Type> Matrix<Type>::Add(Matrix<Type> &M, Method m = Method::Sequence, int
 
 #pragma endregion
 
-// Умножение элементов матрицы
+// РЈРјРЅРѕР¶РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ РјР°С‚СЂРёС†С‹
 #pragma region Multiplication
 template<class Type>
 Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1165,7 +1277,7 @@ Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 	}
 	case Method::Cilk_spawn:
 	{
-		return MulCilkSpawn();
+		return MulCilkSpawn(_threads);
 	}
 	case Method::Cilk_for_index:
 	{
@@ -1178,16 +1290,13 @@ Type Matrix<Type>::Mul(Method m = Method::Sequence, int _threads = 1)
 #pragma endregion
 
 //
-// не знаю зачем написал, засоряю код
+// РЅРµ Р·РЅР°СЋ Р·Р°С‡РµРј РЅР°РїРёСЃР°Р», Р·Р°СЃРѕСЂСЏСЋ РєРѕРґ
 //
-// Разность двух матриц
+// Р Р°Р·РЅРѕСЃС‚СЊ РґРІСѓС… РјР°С‚СЂРёС†
 #pragma region Substraction
 template<class Type>
 Matrix<Type> Matrix<Type>::Sub(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1225,14 +1334,11 @@ Matrix<Type> Matrix<Type>::Sub(Matrix<Type> &M, Method m = Method::Sequence, int
 
 #pragma endregion
 
-// Поиск максимального элемента
+// РџРѕРёСЃРє РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ СЌР»РµРјРµРЅС‚Р°
 #pragma region Maximum
 template<class Type>
 Type Matrix<Type>::Max(Matrix<Type> &M, Method m = Method::Sequence, int _threads = 1)
 {
-	omp_set_num_threads(_threads);
-	__cilkrts_set_param("nworkers", doubleToString(_threads).c_str());
-	__cilkrts_init();
 	switch (m)
 	{
 	case Method::Sequence:
@@ -1257,7 +1363,7 @@ Type Matrix<Type>::Max(Matrix<Type> &M, Method m = Method::Sequence, int _thread
 	}
 	case Method::Cilk_spawn:
 	{
-		return MaxCilkSpawn(M);
+		return MaxCilkSpawn(M, _threads);
 	}
 	case Method::Cilk_for_index:
 	{
