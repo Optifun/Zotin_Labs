@@ -825,7 +825,7 @@ private:
 			throw new exception("Матрицы разной размерности");
 		Type m1 = arr[0][0], m2 = M.arr[0][0];
 		Type **arr1 = this->arr, **arr2 = M.arr;
-		#pragma omp parallel for reduction(max:m1, m2) shared(arr, M)
+		#pragma omp parallel for reduction(max:m1, m2) shared(arr1, arr2)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 			{
