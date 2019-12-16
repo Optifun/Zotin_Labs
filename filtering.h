@@ -241,15 +241,13 @@ RGBQUAD* sortRGBAsync(RGBQUAD* arr, long length, ByteSortingMethod sort)
 //RGB - исходное изображение
 //RH, RW - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает RGBQUAD -  изображение с примененным на нём медианную фильтрацию
+//RGBresult должен быть инициализирован, в него возвращается результат
 void medianFiltering(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBresult = new RGBQUAD*[height];
 	RGBQUAD *temp1, *temp2;
 	int size = (2 * RH + 1) * (2 * RW + 1);
 	for (int y = 0; y < height; y++)
 	{
-		RGBresult[y] = new RGBQUAD[width];
 		for (int x = 0; x < width; x++)
 		{
 			//в окне H x W ложу пиксели в массив temp
@@ -266,15 +264,13 @@ void medianFiltering(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQ
 //RGB - исходное изображение
 //RH, RW - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает RGBQUAD -  изображение с примененным на нём медианную фильтрацию
+//RGBresult должен быть инициализирован, в него возвращается результат
 void medianFilteringAsyncSort(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBresult = new RGBQUAD*[height];
 	RGBQUAD *temp1, *temp2;
 	int size = (2 * RH + 1) * (2 * RW + 1);
 	for (int y = 0; y < height; y++)
 	{
-		RGBresult[y] = new RGBQUAD[width];
 		for (int x = 0; x < width; x++)
 		{
 			//в окне H x W ложу пиксели в массив temp
@@ -291,16 +287,14 @@ void medianFilteringAsyncSort(RGBQUAD** &RGB, int height, int width, int RH, int
 //RGB - исходное изображение
 //RH, RW - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает RGBQUAD -  изображение с примененным на нём медианную фильтрацию
+//RGBresult должен быть инициализирован, в него возвращается результат
 void medianFilteringAsync(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBresult = new RGBQUAD*[height]; // на выходе картинка с примененным фильтром
 	RGBQUAD *temp1, *temp2;
 	int size = (2 * RH + 1) * (2 * RW + 1);
 	#pragma omp parallel for private(temp1, temp2) shared(RGB, RGBresult) schedule(static, RH)
 	for (int y = 0; y < height; y++)
 	{
-		RGBresult[y] = new RGBQUAD[width];
 		for (int x = 0; x < width; x++)
 		{
 			//в окне H x W ложу пиксели в массив temp
@@ -317,14 +311,12 @@ void medianFilteringAsync(RGBQUAD** &RGB, int height, int width, int RH, int RW,
 //image - исходное изображение
 //wHeight, wWidth - радиусы рамки по вертикали и горизонтали
 //method - метод сортировки байтового массива
-//Возвращает изображение с примененным на нём медианную фильтрацию
+//RGBresult должен быть инициализирован, в него возвращается результат
 void medianFilteringCilkFor(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult, ByteSortingMethod method)
 {
-	RGBresult = new RGBQUAD*[height];
 	int size = (2 * RH + 1) * (2 * RW + 1);
 	cilk_for (int y = 0; y < height; y++)
 	{
-		RGBresult[y] = new RGBQUAD[width];
 		for (int x = 0; x < width; x++)
 		{
 			//распараллеливание силк фор здесь даёт замедление
@@ -483,6 +475,38 @@ void LineFilteringSredParal(RGBQUAD** &RGB, int height, int width, int RH, int R
 		}
 }
 
+//Линейный средний фильтр параллельный; RH, RW - размеры рангов скользящего окна
+void LineFilteringSredCilk(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+	cilk_for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			int rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			for (int DY = -RH; DY <= RH; DY++)
+			{
+				int KY = Y + DY;
+				if (KY < 0)
+					KY = 0;
+				if (KY > height - 1)
+					KY = height - 1;
+				for (int DX = -RW; DX <= RW; DX++)
+				{
+					int KX = X + DX;
+					if (KX < 0)
+						KX = 0;
+					if (KX > width - 1)
+						KX = width - 1;
+					rgbBlue += RGB[KY][KX].rgbBlue;
+					rgbGreen += RGB[KY][KX].rgbGreen;
+					rgbRed += RGB[KY][KX].rgbRed;
+				}
+			}
+			RGBresult[Y][X].rgbBlue = rgbBlue / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbGreen = rgbGreen / ((RH * 2 + 1) * (RW * 2 + 1));
+			RGBresult[Y][X].rgbRed = rgbRed / ((RH * 2 + 1) * (RW * 2 + 1));
+		}
+}
+
 #pragma endregion
 
 #pragma region GausMatrix
@@ -550,11 +574,11 @@ double* GetGauss1DMatrixCilk(int RX, double q)
 {
 	int size = RX * 2 + 1;
 	double* Result = new double[size];
-	int X = 1;
+	int X = 0;
 	cilk::reducer<cilk::op_add<double>> SUM = 0;
 	cilk_for(int Y = -RX; Y <= RX; Y++)
 	{
-		double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
+		double CF = (1 / sqrt(2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / sqrt(2 * q * q));
 		Result[Y + RX] = CF;
 		*SUM += CF;
 	}
@@ -585,10 +609,8 @@ double* GetGauss1DMatrixCilk(int RX, double q)
 void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
 	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
-	RGBresult = new RGBQUAD*[height];
 	for (int Y = 0; Y < height; Y++)
 	{
-		RGBresult[Y] = new RGBQUAD[width];
 		for (int X = 0; X < width; X++)
 		{
 			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
@@ -633,11 +655,9 @@ void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, R
 void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
 	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
-	RGBresult = new RGBQUAD*[height];
 	#pragma omp parallel for firstprivate(RH, RW, height, width) shared(RGB, RGBresult) schedule(static, RH * 2 + 1)
 	for (int Y = 0; Y < height; Y++)
 	{
-		RGBresult[Y] = new RGBQUAD[width];
 		for (int X = 0; X < width; X++)
 		{
 			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
@@ -676,62 +696,6 @@ void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int 
 		delete[] CoefMatrix[i];
 	delete[] CoefMatrix;
 }
-
-/*
-//Линейный фильтр Гаусса последовательный; RH, RW - размеры рангов скользящего окна
-//Возвращает RGBresult указывающий на выходную картинку
-void LineFilteringGaussCilk(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
-{
-	double** CoefMatrix = GetGaussMatrixCilk(RH, RW, RW / 3.0); //Сигма тут
-	int lenx = 2 * RW + 1;
-	int leny = 2 * RH + 1;
-	RGBresult = new RGBQUAD*[height];
-	cilk_for(int Y = 0; Y < height; Y++)
-	{
-		RGBresult[Y] = new RGBQUAD[width];
-		for (int X = 0; X < width; X++)
-		{
-			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
-			int *KYs = new int[2 * RH + 1];
-			int *KXs = new int[2 * RW + 1];
-			for (int DY = -RH; DY <= RH; DY++)
-			{
-				int index = (Y + DY < 0) ? 0 : Y + DY;
-				KYs[RH + DY] = (index > height - 1) ? height - 1 : index;
-			}
-
-			for (int DX = -RW; DX <= RW; DX++)
-			{
-				int index = (X + DX < 0) ? 0 : X + DX;
-				KXs[RW + DX] = (index > width - 1) ? width - 1 : index;
-			}
-			//CoefMatrix[0:lenx - 1][0:leny - 1] = __sec_reduce_add(RGB[KYs[0:lenx - 1]][KXs[0:leny - 1]].rgbBlue);
-			//RGB[KYs[0:leny - 1]][KXs[0:lenx - 1]].rgbBlue = CoefMatrix[0:leny - 1][0:lenx - 1];
-
-			//прохожусь по матрице коэффициентов
-			//в компонент складываю соответствующую компоненту умноженную на коэффициент матрицы
-			rgbBlue	= __sec_reduce_add( RGB[KYs[0 : leny - 1]] [KXs[0 : lenx - 1]].rgbBlue	*	CoefMatrix[0 : leny - 1][0 : lenx - 1] );
-			rgbGreen= __sec_reduce_add( RGB[KYs[0 : leny - 1]] [KXs[0 : lenx - 1]].rgbGreen	*	CoefMatrix[0 : leny - 1][0 : lenx - 1] );
-			rgbRed	= __sec_reduce_add( RGB[KYs[0 : leny - 1]] [KXs[0 : lenx - 1]].rgbRed	*	CoefMatrix[0 : leny - 1][0 : lenx - 1] );
-
-			if (rgbBlue < 0)	rgbBlue = 0;
-			if (rgbBlue > 255)	rgbBlue = 255;
-			if (rgbGreen < 0)	rgbGreen = 0;
-			if (rgbGreen > 255)	rgbGreen = 255;
-			if (rgbRed < 0)		rgbRed = 0;
-			if (rgbRed > 255)	rgbRed = 255;
-			RGBresult[Y][X].rgbBlue = rgbBlue;
-			RGBresult[Y][X].rgbGreen = rgbGreen;
-			RGBresult[Y][X].rgbRed = rgbRed;
-		}
-	}
-
-	cilk_for (int i = 0; i < RW; i++)
-		delete[] CoefMatrix[i];
-	delete[] CoefMatrix;
-}
-*/
-
 
 
 void LineFilteringGaussCilk1Dx2(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
