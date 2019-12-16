@@ -545,6 +545,37 @@ double** GetGaussMatrixCilk(int RH, int RW, double q)
 			Result[Y + RH][0:2*RW + 1] /= sum;
 	return Result;
 }
+
+double* GetGauss1DMatrixCilk(int RX, double q)
+{
+	int size = RX * 2 + 1;
+	double* Result = new double[size];
+	int X = 1;
+	cilk::reducer<cilk::op_add<double>> SUM = 0;
+	cilk_for(int Y = -RX; Y <= RX; Y++)
+	{
+		double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (X * X + Y * Y) / (2 * q * q));
+		Result[Y + RX] = CF;
+		*SUM += CF;
+	}
+	double sum = SUM.get_value();
+	Result[0:size] /= sum;
+	return Result;
+}
+//Формирование матрицы коэффициентов для фильтрации Гаусса
+//double** GetGaussMatrixCilkVec(int RH, int RW, double q)
+//{
+//	double** Result = new double*[RH * 2 + 1];
+//	Result[0:RH*2 + 1] = new double[RW * 2 + 1];
+//
+//	cilk::reducer<cilk::op_add<double>> SUM = 0;
+//	//double CF = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (pow([0:RW*2 + 1] - RW,2) + pow([0:RH*2 + 1] - RH,2)) / (2 * q * q));
+//	Result[0:RH*2 + 1][0:RW*2 + 1] = (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (pow([0:RW * 2 + 1] - RW, 2) + pow([0:RH * 2 + 1] - RH, 2)) / (2 * q * q));
+//	*SUM += (1 / (2 * 3.14159265358979323846 * q * q)) * exp(-1 * (pow([0:RW * 2 + 1] - RW, 2) + pow([0:RH * 2 + 1] - RH, 2)) / (2 * q * q));
+//	double sum = SUM.get_value();
+//	Result[0:RW*2 + 1][0:RH*2 + 1] /= sum;
+//	return Result;
+//}
 #pragma endregion
 
 #pragma region GausFiltering
@@ -646,12 +677,14 @@ void LineFilteringGaussParal(RGBQUAD** &RGB, int height, int width, int RH, int 
 	delete[] CoefMatrix;
 }
 
-
+/*
 //Линейный фильтр Гаусса последовательный; RH, RW - размеры рангов скользящего окна
 //Возвращает RGBresult указывающий на выходную картинку
 void LineFilteringGaussCilk(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
 	double** CoefMatrix = GetGaussMatrixCilk(RH, RW, RW / 3.0); //Сигма тут
+	int lenx = 2 * RW + 1;
+	int leny = 2 * RH + 1;
 	RGBresult = new RGBQUAD*[height];
 	cilk_for(int Y = 0; Y < height; Y++)
 	{
@@ -659,26 +692,28 @@ void LineFilteringGaussCilk(RGBQUAD** &RGB, int height, int width, int RH, int R
 		for (int X = 0; X < width; X++)
 		{
 			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			int *KYs = new int[2 * RH + 1];
+			int *KXs = new int[2 * RW + 1];
 			for (int DY = -RH; DY <= RH; DY++)
 			{
-				int KY = Y + DY;
-				if (KY < 0)
-					KY = 0;
-				if (KY > height - 1)
-					KY = height - 1;
-				for (int DX = -RW; DX <= RW; DX++)
-				{
-					int KX = X + DX;
-					if (KX < 0)
-						KX = 0;
-					if (KX > width - 1)
-						KX = width - 1;
-					double tmp = CoefMatrix[DY + RH][DX + RW];
-					rgbBlue += RGB[KY][KX].rgbBlue * tmp;
-					rgbGreen += RGB[KY][KX].rgbGreen * tmp;
-					rgbRed += RGB[KY][KX].rgbRed * tmp;
-				}
+				int index = (Y + DY < 0) ? 0 : Y + DY;
+				KYs[RH + DY] = (index > height - 1) ? height - 1 : index;
 			}
+
+			for (int DX = -RW; DX <= RW; DX++)
+			{
+				int index = (X + DX < 0) ? 0 : X + DX;
+				KXs[RW + DX] = (index > width - 1) ? width - 1 : index;
+			}
+			//CoefMatrix[0:lenx - 1][0:leny - 1] = __sec_reduce_add(RGB[KYs[0:lenx - 1]][KXs[0:leny - 1]].rgbBlue);
+			//RGB[KYs[0:leny - 1]][KXs[0:lenx - 1]].rgbBlue = CoefMatrix[0:leny - 1][0:lenx - 1];
+
+			//прохожусь по матрице коэффициентов
+			//в компонент складываю соответствующую компоненту умноженную на коэффициент матрицы
+			rgbBlue	= __sec_reduce_add( RGB[KYs[0 : leny - 1]] [KXs[0 : lenx - 1]].rgbBlue	*	CoefMatrix[0 : leny - 1][0 : lenx - 1] );
+			rgbGreen= __sec_reduce_add( RGB[KYs[0 : leny - 1]] [KXs[0 : lenx - 1]].rgbGreen	*	CoefMatrix[0 : leny - 1][0 : lenx - 1] );
+			rgbRed	= __sec_reduce_add( RGB[KYs[0 : leny - 1]] [KXs[0 : lenx - 1]].rgbRed	*	CoefMatrix[0 : leny - 1][0 : lenx - 1] );
+
 			if (rgbBlue < 0)	rgbBlue = 0;
 			if (rgbBlue > 255)	rgbBlue = 255;
 			if (rgbGreen < 0)	rgbGreen = 0;
@@ -695,6 +730,95 @@ void LineFilteringGaussCilk(RGBQUAD** &RGB, int height, int width, int RH, int R
 		delete[] CoefMatrix[i];
 	delete[] CoefMatrix;
 }
+*/
+
+
+
+void LineFilteringGaussCilk1Dx2(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+{
+	//Получение одномерных матриц
+	double* CoefMatrix1 = GetGauss1DMatrixCilk(RW, RW / 3.0); //Сигма тут
+	double* CoefMatrix2 = GetGauss1DMatrixCilk(RH, RH / 3.0); //Сигма тут
+	//длины рамки по горизонтали и вертикали
+	int lenx = 2 * RW + 1;
+	int leny = 2 * RH + 1;
+
+	// Выделение временной картинки
+	RGBQUAD** TMRGBresult = new RGBQUAD*[height];
+	cilk_for(int Y = 0; Y < height; Y++)
+	{
+		TMRGBresult[Y] = new RGBQUAD[width];
+	}
+
+	int *KXs = new int[lenx];
+	///////////////////// Первая часть по горизонтали
+	cilk_for(int Y = 0; Y < height; Y++)
+	{
+		for (int X = 0; X < width; X++)
+		{
+			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			//Получаю индексы для горизонтального прохода по рамке
+			for (int DX = -RW; DX <= RW; DX++)
+			{
+				int index = (X + DX < 0) ? 0 : X + DX;
+				KXs[RW + DX] = (index > width - 1) ? width - 1 : index;
+			}
+			//Применяю одномерную матрицу к строке пикселей
+			rgbBlue	 = __sec_reduce_add(CoefMatrix1[0:lenx] * RGB[Y][KXs[0:lenx]].rgbBlue);
+			rgbGreen = __sec_reduce_add(CoefMatrix1[0:lenx] * RGB[Y][KXs[0:lenx]].rgbGreen);
+			rgbRed	 = __sec_reduce_add(CoefMatrix1[0:lenx] * RGB[Y][KXs[0:lenx]].rgbRed);
+
+			if (rgbBlue < 0)	rgbBlue = 0;
+			if (rgbBlue > 255)	rgbBlue = 255;
+			if (rgbGreen < 0)	rgbGreen = 0;
+			if (rgbGreen > 255)	rgbGreen = 255;
+			if (rgbRed < 0)		rgbRed = 0;
+			if (rgbRed > 255)	rgbRed = 255;
+
+			//Получаю временную картинку с горизонтальным размытием
+			TMRGBresult[Y][X].rgbBlue = rgbBlue;
+			TMRGBresult[Y][X].rgbGreen = rgbGreen;
+			TMRGBresult[Y][X].rgbRed = rgbRed;
+		}
+	}
+
+	delete[] KXs;
+	KXs = new int[leny];
+	///////////////////// Вторая часть по вертикали
+	cilk_for(int Y = 0; Y < width; Y++)
+	{
+		for (int X = 0; X < height; X++)
+		{
+			double rgbBlue = 0, rgbGreen = 0, rgbRed = 0;
+			
+			for (int DX = -RH; DX <= RH; DX++)
+			{
+				int index = (X + DX < 0) ? 0 : X + DX;
+				KXs[RH + DX] = (index > height - 1) ? height - 1 : index;
+			}
+			rgbBlue	 = __sec_reduce_add(CoefMatrix2[0:leny] * TMRGBresult[KXs[0:leny]][Y].rgbBlue);
+			rgbGreen = __sec_reduce_add(CoefMatrix2[0:leny] * TMRGBresult[KXs[0:leny]][Y].rgbGreen);
+			rgbRed	 = __sec_reduce_add(CoefMatrix2[0:leny] * TMRGBresult[KXs[0:leny]][Y].rgbRed);
+
+			if (rgbBlue < 0)	rgbBlue = 0;
+			if (rgbBlue > 255)	rgbBlue = 255;
+			if (rgbGreen < 0)	rgbGreen = 0;
+			if (rgbGreen > 255)	rgbGreen = 255;
+			if (rgbRed < 0)		rgbRed = 0;
+			if (rgbRed > 255)	rgbRed = 255;
+
+			RGBresult[X][Y].rgbBlue = rgbBlue;
+			RGBresult[X][Y].rgbGreen = rgbGreen;
+			RGBresult[X][Y].rgbRed = rgbRed;
+		}
+	}
+	cilk_for(int i = 0; i < height; i++)
+		delete[] TMRGBresult[i];
+	delete[] TMRGBresult;
+	delete[] CoefMatrix1;
+	delete[] CoefMatrix2;
+}
+
 
 #pragma endregion
 
