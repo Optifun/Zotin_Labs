@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <omp.h>
 #include <string>
+#include <list>
 
 using namespace std;
 
@@ -154,21 +155,34 @@ void SelectPixel(RGBQUAD** &RGB, int height, int width, int Y, int X) {
 			if (KX == X && KY == Y)
 				continue;
 			else {
-				RGB[KY][KX].rgbBlue = 255;
-				RGB[KY][KX].rgbRed = 0;
+				RGB[KY][KX].rgbBlue = 0;
+				RGB[KY][KX].rgbRed = 255;
 				RGB[KY][KX].rgbGreen = 0;
 			}
 		}
 	}
 }
 
-void SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, int maxPoints, RGBQUAD** &RGBresult) {
-	
+double* SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, RGBQUAD** &RGBresult) {
+	//Копирование RGB в RGBResult
+	for (int Y = 0; Y < height; Y++)
+		for (int X = 0; X < width; X++)
+		{
+			RGBresult[Y][X].rgbBlue = RGB[Y][X].rgbBlue;
+			RGBresult[Y][X].rgbGreen = RGB[Y][X].rgbGreen;
+			RGBresult[Y][X].rgbRed = RGB[Y][X].rgbRed;
+			RGBresult[Y][X].rgbReserved = RGB[Y][X].rgbReserved;
+		}
+
+	double* Times = new double[5];
+	double TmpTimes;
+////////////////////////////////////////////////////////////
+	TmpTimes = omp_get_wtime();
 	//Фильтрация методом Гаусса изображение
 	RGBQUAD** RGBFiltered = new RGBQUAD*[height];
 	for (int i = 0; i < height; i++)
 		RGBFiltered[i] = new RGBQUAD[width];
-	LineFilteringGauss(RGB, height, width, 10, 10, RGBFiltered);
+	LineFilteringGauss(RGB, height, width, 5, 5, RGBFiltered);
 
 	//Массив яркости	
 	double** I = new double*[height];
@@ -177,7 +191,9 @@ void SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, int 
 		for (int X = 0; X < width; X++)
 			I[Y][X] = RGBFiltered[Y][X].rgbRed * 0.299 + RGBFiltered[Y][X].rgbGreen * 0.587 + RGBFiltered[Y][X].rgbBlue * 0.144;
 	}
-
+	Times[0] = omp_get_wtime() - TmpTimes;
+////////////////////////////////////////////////////////////
+	TmpTimes = omp_get_wtime();
 	//Объявление вспомогательных массивов
 	double** DiffX1 = new double*[height];
 	for (int Y = 0; Y < height; Y++)	
@@ -221,7 +237,11 @@ void SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, int 
 	TestAfterDiff(DiffY, height, width);
 	TestAfterDiff(DiffXY, height, width);
 
+	Times[1] = omp_get_wtime() - TmpTimes;
+////////////////////////////////////////////////////////////
+	TmpTimes = omp_get_wtime();
 	//Формирование массива отклика угла
+	double max = 0, min = 0;
 	long Counter = 0;
 	double** R = new double*[height];
 	for (int Y = 0; Y < height; Y++) {
@@ -231,7 +251,9 @@ void SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, int 
 			double B = DiffY[Y][X];
 			double C = DiffXY[Y][X];
 			double tmp = (A * B - C * C) - 0.04 * ((A + B) * (A + B));
-			if (tmp > threshold) {
+			if (tmp > 0) {
+				if (tmp > max)
+					max = tmp;
 				R[Y][X] = tmp;
 				Counter++;
 			}
@@ -267,45 +289,56 @@ void SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, int 
 	for (int i = 0; i < height; i++)
 		delete[] RGBFiltered[i];
 	delete[] RGBFiltered;
-	//
 
+	Times[2] = omp_get_wtime() - TmpTimes;
+////////////////////////////////////////////////////////////
+	TmpTimes = omp_get_wtime();
 	//Составление списка точек Харриса
+	max *= ((double)threshold / 100);
 	HarrisPoint* HarrisPoints = new HarrisPoint[Counter];
 	Counter = 0;
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
-			if (R[Y][X] != 0) {
+			if (R[Y][X] > max) {
 				HarrisPoints[Counter].Y = Y;
 				HarrisPoints[Counter].X = X;
 				HarrisPoints[Counter].R = R[Y][X];
-				//cout << R[Y][X] <<  "\n";
-				//cout << HarrisPoints[Counter].Y << " " << HarrisPoints[Counter].X << "\n";
-				//Вывод точек
 				Counter++;
 			}
 	
-	//Копирование RGB в RGBResult
-	for (int Y = 0; Y < height; Y++)
-		for (int X = 0; X < width; X++)
-		{
-			RGBresult[Y][X].rgbBlue = RGB[Y][X].rgbBlue;
-			RGBresult[Y][X].rgbGreen = RGB[Y][X].rgbGreen;
-			RGBresult[Y][X].rgbRed = RGB[Y][X].rgbRed;
-			RGBresult[Y][X].rgbReserved = RGB[Y][X].rgbReserved;
-		}
-	//cout << Counter;
-
-	//Вывод точек
+	//Сортировка
 	ShellSortPosled(HarrisPoints, Counter);
-	for (int i = 0; i < (Counter > maxPoints ? maxPoints : Counter); i++) {
-		//cout << HarrisPoints[i].R << "\n";
-		SelectPixel(RGBresult, height, width, HarrisPoints[i].Y, HarrisPoints[i].X);
+	
+	//Отсечение по порогу точек
+	list<HarrisPoint> ToPrint;
+	for (int i = 0; i < Counter; i++) {
+		bool Dobavit = true;
+		for each (HarrisPoint Elem in ToPrint)
+		{
+			if (pow(HarrisPoints[i].Y - Elem.Y, 2) + pow(HarrisPoints[i].X - Elem.X, 2) < 20 * 20) {
+				Dobavit = false;
+				break;
+			}
+		}
+		if (Dobavit) ToPrint.push_back(HarrisPoints[i]);
 	}
-
+	
+	Times[3] = omp_get_wtime() - TmpTimes;
+////////////////////////////////////////////////////////////
+	TmpTimes = omp_get_wtime();
+	//Визуализация особоых точек
+	for each (HarrisPoint Elem in ToPrint)
+		SelectPixel(RGBresult, height, width, Elem.Y, Elem.X);
+	Times[4] = omp_get_wtime() - TmpTimes;
 	//Очистка лишнего
 	for (int i = 0; i < height; i++)
 		delete[] R[i];
 	delete[] R;
 	delete[] HarrisPoints;
-	//
+////////////////////////////////////////////////////////////
+	return Times;
+}
+
+bool Test(HarrisPoint HP, HarrisPoint HPCenter2) {
+	return !pow(HP.Y - HPCenter2.Y, 2) + pow(HP.X - HPCenter2.X, 2) < 20 * 20;
 }
