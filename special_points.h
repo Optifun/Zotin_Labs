@@ -1,16 +1,11 @@
 #include <cilk/cilk.h>
-#include <cilk/cilk_api.h>
-#include <cilk/reducer_opadd.h>
-#include <cilk/reducer_max.h>
-#include <cilk/reducer_opmul.h>
+#include <omp.h>
 #include <stdio.h>
 #include <omp.h>
 #include <string>
 #include <list>
 
 using namespace std;
-
-
 
 typedef struct HarrisPoint {
 	double R;
@@ -23,7 +18,6 @@ void CreateArrArr(double** &Arr, int YSize, int XSize) {
 	for (int Y = 0; Y < YSize; Y++)
 		Arr[Y] = new double[XSize];
 }
-
 void DeleteArrArr(double** &Arr, int YSize) {
 	for (int i = 0; i < YSize; i++)
 		delete[] Arr[i];
@@ -34,8 +28,6 @@ void DeleteArrArr(RGBQUAD** &Arr, int YSize) {
 		delete[] Arr[i];
 	delete[] Arr;
 }
-
-
 
 #pragma region Posled
 void ShellSortPosled(HarrisPoint* Arr, int Size) {
