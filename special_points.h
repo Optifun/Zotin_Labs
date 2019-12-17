@@ -16,7 +16,6 @@ typedef struct HarrisPoint {
 	int X;
 } HarrisPoint;
 
-
 void ShellSortPosled(HarrisPoint* Arr, int Size) {
 	for (int step = Size / 2; step > 0; step /= 2)
 		for (int i = step; i < Size; i++)
@@ -28,20 +27,8 @@ void ShellSortPosled(HarrisPoint* Arr, int Size) {
 			}
 }
 
-void ShellSortParal(HarrisPoint* Arr, int Size) {
-	for (int step = Size / 2; step > 0; step /= 2)
-#pragma omp parallel for shared(Arr) firstprivate(Size) schedule(guided)
-		for (int i = step; i < Size; i++)
-			for (int j = i - step; j >= 0 && Arr[j].R < Arr[j + step].R; j -= step)
-			{
-				HarrisPoint tmp = Arr[j];
-				Arr[j] = Arr[j + step];
-				Arr[j + step] = tmp;
-			}
-}
-
 //Формирование матрицы коэффициентов для фильтрации Гаусса
-double** GetGaussMatrix(int RH, int RW, double q) {
+double** GetGaussMatrixPosled(int RH, int RW, double q) {
 	double** Result = new double*[RH * 2 + 1];
 	for (int i = 0; i < RH * 2 + 1; i++)
 		Result[i] = new double[RW * 2 + 1];
@@ -57,9 +44,9 @@ double** GetGaussMatrix(int RH, int RW, double q) {
 			Result[Y + RH][X + RW] /= SUM;
 	return Result;
 }
-void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
+void LineFilteringGaussPosled(RGBQUAD** &RGB, int height, int width, int RH, int RW, RGBQUAD** &RGBresult)
 {
-	double** CoefMatrix = GetGaussMatrix(RH, RW, RW / 3.0); //Сигма тут
+	double** CoefMatrix = GetGaussMatrixPosled(RH, RW, RW / 3.0); //Сигма тут
 	RGBresult = new RGBQUAD*[height];
 	for (int Y = 0; Y < height; Y++)
 	{
@@ -103,7 +90,7 @@ void LineFilteringGauss(RGBQUAD** &RGB, int height, int width, int RH, int RW, R
 	delete[] CoefMatrix;
 }
 
-void TestAfterDiff(double** &Grad, int height, int width) {
+void TestAfterDiffPosled(double** &Grad, int height, int width) {
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
 		{
@@ -111,7 +98,7 @@ void TestAfterDiff(double** &Grad, int height, int width) {
 			if (Grad[Y][X] < 0) Grad[Y][X] = 0.0;
 		}
 }
-void Diff(double** &I, int height, int width, double** &Iresult, double** &CoefMatrixX) {
+void DiffPosled(double** &I, int height, int width, double** &Iresult, double** &CoefMatrixX) {
 	for (int Y = 0; Y < height; Y++)
 		for (int X = 0; X < width; X++)
 		{
@@ -182,7 +169,7 @@ double* SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, R
 	RGBQUAD** RGBFiltered = new RGBQUAD*[height];
 	for (int i = 0; i < height; i++)
 		RGBFiltered[i] = new RGBQUAD[width];
-	LineFilteringGauss(RGB, height, width, 5, 5, RGBFiltered);
+	LineFilteringGaussPosled(RGB, height, width, 5, 5, RGBFiltered);
 
 	//Массив яркости	
 	double** I = new double*[height];
@@ -226,16 +213,16 @@ double* SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, R
 	CoefY[2] = new double[3] { -1, -1, -1 };
 		
 	//Вычисление градиентов яркости (свёртка)
-	Diff(I, height, width, DiffX1, CoefX);
-	Diff(I, height, width, DiffY1, CoefX);
+	DiffPosled(I, height, width, DiffX1, CoefX);
+	DiffPosled(I, height, width, DiffY1, CoefX);
 	
-	Diff(DiffX1, height, width, DiffX, CoefX);
-	Diff(DiffX1, height, width, DiffXY, CoefY);
-	Diff(DiffY1, height, width, DiffY, CoefY);
+	DiffPosled(DiffX1, height, width, DiffX, CoefX);
+	DiffPosled(DiffX1, height, width, DiffXY, CoefY);
+	DiffPosled(DiffY1, height, width, DiffY, CoefY);
 	
-	TestAfterDiff(DiffX, height, width);
-	TestAfterDiff(DiffY, height, width);
-	TestAfterDiff(DiffXY, height, width);
+	TestAfterDiffPosled(DiffX, height, width);
+	TestAfterDiffPosled(DiffY, height, width);
+	TestAfterDiffPosled(DiffXY, height, width);
 
 	Times[1] = omp_get_wtime() - TmpTimes;
 ////////////////////////////////////////////////////////////
@@ -339,6 +326,16 @@ double* SpecialPoints(RGBQUAD** &RGB, int height, int width, double threshold, R
 	return Times;
 }
 
-bool Test(HarrisPoint HP, HarrisPoint HPCenter2) {
-	return !pow(HP.Y - HPCenter2.Y, 2) + pow(HP.X - HPCenter2.X, 2) < 20 * 20;
+
+
+void ShellSortParal(HarrisPoint* Arr, int Size) {
+	for (int step = Size / 2; step > 0; step /= 2)
+#pragma omp parallel for shared(Arr) firstprivate(Size) schedule(guided)
+		for (int i = step; i < Size; i++)
+			for (int j = i - step; j >= 0 && Arr[j].R < Arr[j + step].R; j -= step)
+			{
+				HarrisPoint tmp = Arr[j];
+				Arr[j] = Arr[j + step];
+				Arr[j + step] = tmp;
+			}
 }
