@@ -9,17 +9,18 @@
 #include<stdlib.h>
 #undef max
 #undef min
-#include "../Zotin_Labs/matrix_new.cpp"
-#include "../Zotin_Labs/filtering.h"
-#include"../Zotin_Labs/logger.h"
-#include"../Zotin_Labs/texture_filtering.h"
+#include "matrix_new.cpp"
+#include "filtering.h"
+#include "logger.h"
+#include "texture_filtering.h"
 #undef max
 #undef min
 #include<Windows.h>
 using namespace std;
 
 #define Random(a, b) (double)rand() / (RAND_MAX + 1)*((b)-(a)) + (a)
-#define CALC_Times 15
+#define CALC_Times_Matrix 5
+#define CALC_Times_Filter 1
 int threads = 1;
 long Matrix<int>::Destroed = 0;
 long Matrix<int>::Created = 0;
@@ -92,7 +93,7 @@ namespace one
 		string temp;
 		stringstream str;
 		double time, spd, eff;
-		double *times = new double[CALC_Times];
+		double *times = new double[CALC_Times_Matrix];
 		int k = 0;
 		bool hasData = false;
 		Matrix<T> a,b;
@@ -115,11 +116,12 @@ namespace one
 						__cilkrts_set_param("nworkers", buf);
 						cilk_for(int i = 0; i < 20; i++)
 							c += 0;
+						//cout << endl << __cilkrts_get_nworkers() << endl;
 						if (m == 0)
 							logg << ";;" << d << ";" << 1 << ";";
 						else
 							logg << ";;" << d << ";" << threads << ";";
-						for (int try_ = 0; try_ < CALC_Times; try_++)
+						for (int try_ = 0; try_ < CALC_Times_Matrix; try_++)
 						{
 							if (!hasData)
 							{
@@ -155,7 +157,7 @@ namespace one
 							}
 							times[try_] += omp_get_wtime();
 						}
-						time = calcTime(times, CALC_Times);
+						time = calcTime(times, CALC_Times_Matrix);
 						logg << doubleToString(time) << ";";
 						if (m == 0)
 						{
@@ -192,14 +194,16 @@ namespace two
 			gaussM = new Gauss[3];
 			gaussM[0] = LineFilteringGauss;
 			gaussM[1] = LineFilteringGaussParal;
-			//gaussM[2] = LineFilteringGaussCilk1Dx2;
+			gaussM[2] = LineFilteringGaussCilk1Dx2;
 		}
 	}
 
 	void Zadanie()
 	{
+		//путь до папки с картинками
 		string dir = "C:\\Users\\Public\\Documents\\TestImage\\";
-		logg = Log("Table2.csv", false, true);
+		logg = Log("Table2.csv", true, true);
+		//названия картинок
 		string fnames[3] = { "1", "2", "3"};
 		string method_names[2] = { "Median ", "Gauss "};
 		string parallel_method[3] = { "Sequentional", "Omp Async Sort", "Cilk For + Index"};
@@ -207,27 +211,45 @@ namespace two
 		string temp;
 		stringstream str;
 		double time, spd, eff;
-		double *times = new double[CALC_Times];
-		int k = 0;
+		double *times = new double[CALC_Times_Filter];
+		int k = 0, c=0;
+		char buf[5];
 		BITMAPFILEHEADER head;
 		BITMAPINFOHEADER info;
 		RGBQUAD **RGB, **result;
 		Initialize();
 		logg << "Method;Image;Window;Thread;Time;Speed;\n";
 		for (int m = 0; m < 2; m++)//метод фильтрации
-		{
 			for (int p = 0; p < 3; p++)// параллельный метод
-				for (int img = 0; img < 3; img++)// номер картинки
-				{
-					str = stringstream();
-					str << dir << fnames[img] << ".bmp";
-					BMPRead(RGB, head, info, str.str().c_str());
-					
-					for (int window = 9; window <= 21; window += 6)
+			{
+				logg << method_names[m] << parallel_method[p] << ";\n";
+					for (int img = 0; img < 3; img++)// номер картинки
 					{
+						str = stringstream();
+						str << dir << fnames[img] << ".bmp";
+						BMPRead(RGB, head, info, str.str().c_str());
+						result = new RGBQUAD*[info.biHeight];
+						for (int i = 0; i < info.biHeight; i++)
+						{
+							result[i] = new RGBQUAD[info.biWidth];
+						}
+
+						for (int window = 3; window <= 11; window += 4)
+						{
+
 							for (threads = 2; threads < 5; threads++)
 							{
-								for (int try_ = 0; try_ < CALC_Times; try_++)
+								if (m == 0)
+									logg << ";" << fnames[img] << ";" << window << ";" << 1 << ";";
+								else
+									logg << ";" << fnames[img] << ";" << window << ";" << threads << ";";
+								omp_set_num_threads(threads);
+								__cilkrts_end_cilk();
+								sprintf_s(buf, "%d", threads);
+								__cilkrts_set_param("nworkers", buf);
+								cilk_for(int i = 0; i < 20; i++)
+									c += 0;
+								for (int try_ = 0; try_ < CALC_Times_Filter; try_++)
 								{
 									times[try_] = -omp_get_wtime();
 									if (m == 0)
@@ -235,23 +257,14 @@ namespace two
 									else
 										gaussM[p](RGB, info.biHeight, info.biWidth, window, window, result);
 									times[try_] += omp_get_wtime();
-									if (try_ != CALC_Times - 1 && threads != 2)
-									{
-										for (int i = 0; i < info.biHeight; i++)
-											delete[] result;
-										delete[] result;
-									}
 								}
-								time = calcTime(times, CALC_Times);
+								time = calcTime(times, CALC_Times_Filter);
 								logg << time << ";";
 								if (threads == 2)
 								{
 									str = stringstream();
-									str << dir << "lab5\\" << fnames[img] << "[" << method_names[m] << parallel_method[p] << "].bmp";
+									str << dir << "lab5\\" << fnames[img] << "(" << method_names[m] << parallel_method[p] << ")[" << window << "].bmp";
 									BMPWrite(result, head, info, str.str().c_str());
-									for (int i = 0; i < info.biHeight; i++)
-										delete[] result;
-									delete[] result;
 								}
 
 								if (m == 0)
@@ -268,14 +281,17 @@ namespace two
 
 							}
 
-					}
+						}
 
-
-					for (int i = 0; i < info.biHeight; i++)
+						for (int i = 0; i < info.biHeight; i++)
+						{
+							delete[] result[i];
+							delete[] RGB[i];
+						}
+						delete[] result;
 						delete[] RGB;
-					delete[] RGB;
-				}
-		}
+					}
+			}
 	}
 
 	void Test()
@@ -320,7 +336,7 @@ namespace three
 	{
 		string dir = "C:\\Users\\Public\\Documents\\TestImage\\";
 		logg = Log("Table3.csv", true, true);
-		string fnames[3] = { "1", "2", "3" };
+		string fnames[2] = { "3", "4" };
 		string method_names[5] = { "Texture Sequence", "Textute Omp For", "Texture Cilk For" ,"Texture Omp For + Index", "Texture Cilk For + Index"};
 		double posled[3][3];//1 метод 3 набора данных 3 режима
 		string temp;
@@ -338,7 +354,7 @@ namespace three
 		for (int m = 0; m < 5; m++)//метод фильтрации
 		{
 			logg << method_names[m] << ";\n";
-				for (int img = 0; img < 3; img++)// номер картинки
+				for (int img = 0; img < 2; img++)// номер картинки
 				{
 					str = stringstream();
 					str << dir << fnames[img] << ".bmp";
