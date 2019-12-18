@@ -36,10 +36,10 @@ int main()
 	for (int i = 0; i < info.biHeight; i++)
 		RGBresult[i] = new RGBQUAD[info.biWidth];
 	BMPRead(RGB, head, info, str.c_str());
-	SpecialPointsParalOmp(RGB, info.biHeight, info.biWidth, 10, RGBresult);
+	SpecialPointsPosled(RGB, info.biHeight, info.biWidth, 10, RGBresult);	
 	BMPWrite(RGBresult, head, info, str2.c_str());
-	SpecialPointsParalOmp(RGB, info.biHeight, info.biWidth, 10, RGBresult);
-	BMPWrite(RGBresult, head, info, str3.c_str());
+	//SpecialPointsParalOmp(RGB, info.biHeight, info.biWidth, 10, RGBresult);
+	//BMPWrite(RGBresult, head, info, str3.c_str());
 
 	//Файл для результата
 	std::ofstream out;
@@ -48,15 +48,15 @@ int main()
 	//Количество видов функций:
 	int FunctArrSize = 1;
 	//Суммарное количество вложенных функций
-	int FunctArrArrSize[] { 4 };	//5
+	int FunctArrArrSize[] { 5 };
 	//Задание массива указателей (первая последовательная, остальные - параллельные реализации)
 	void*** FunctArr = new void**[FunctArrSize];
-	FunctArr[0] = new void*[FunctArrArrSize[0]]{ SpecialPointsPosled , SpecialPointsParalOmp, SpecialPointsParalCilkFor, SpecialPointsParalOmpCilk/*, SpecialPointsParalCilkForIndex*/};
+	FunctArr[0] = new void*[FunctArrArrSize[0]]{ SpecialPointsPosled , SpecialPointsParalOmp, SpecialPointsParalCilkFor, SpecialPointsParalOmpCilk, SpecialPointsParalCilkForIndex};
 	//Задание массива имён функций
 	string ** FunctNameArr = new string*[FunctArrSize];
-	FunctNameArr[0] = new string[FunctArrArrSize[0]]{ "Особые точки последов." , "Особ. точки парал. OMP" , "Особ. точки парал. CILKFOR" , "Особ. точки парал. OMPCILK" /*, "Особ. точки парал. CILKINDEX" */};
+	FunctNameArr[0] = new string[FunctArrArrSize[0]]{ "Особые точки последов." , "Особ. точки парал. OMP" , "Особ. точки парал. CILKFOR" , "Особ. точки парал. OMPCILK" , "Особ. точки парал. CILKINDEX"};
 	//Количество наборов данных
-	int NDFunctionSetSize = 1;
+	int NDFunctionSetSize = 4;
 
 	//Тут необходимо задать параметры функции
 	typedef double*(*typeOfFunct)(RGBQUAD** &RGB, int height, int width, double threshold, RGBQUAD** &RGBresult);
@@ -81,14 +81,14 @@ int main()
 			//
 			Xxx = (typeOfFunct)FunctArr[k][0];
 			double summ = 0;
-			for (int sr = 0; sr < 3; sr++)
+			for (int sr = 0; sr < 1; sr++)
 			{
 				time_Start = omp_get_wtime();
 				//Тут необходимо задать параметры функции
 				Times = Xxx(RGB, info.biHeight, info.biWidth, 10, RGBresult);
 				summ += omp_get_wtime() - time_Start;
 			}
-			posledTime = summ / 3;
+			posledTime = summ / 1;
 			out << " " << Round(posledTime, 3) << ";" << Round(Times[0], 5) << ";" << Times[1] << ";" << Round(Times[0], 5) << ";" << Round(Times[0], 5) << ";" << Round(Times[0], 5) << ";";
 			cout << Round(posledTime, 3) << "\t" << Round(Times[0], 5) << "\t" << Times[1] << "\t" << Round(Times[0], 5) << "\t" << Round(Times[0], 5) << "\t" << Round(Times[0], 5) << "\t";
 			out << "\n";
@@ -99,22 +99,24 @@ int main()
 				{
 					out << FunctNameArr[k][i].c_str() << " Thr: " << g << ";";
 					cout << FunctNameArr[k][i].c_str() << " Thr: " << g << "\t";
-					/*__cilkrts_end_cilk();
+					__cilkrts_end_cilk();
 					__cilkrts_set_param("nworkers", doubleToString(g).c_str());
-					__cilkrts_init();*/
+					int hjk = 0;
+					cilk_for(int i = 0; i < 20; i++)
+						hjk++;
 					omp_set_num_threads(g);
 					Xxx = (typeOfFunct)FunctArr[k][i];
 					summ = 0;
-					for (int sr = 0; sr < 3; sr++)
+					for (int sr = 0; sr < 1; sr++)
 					{
 						time_Start = omp_get_wtime();
 						//Тут необходимо задать параметры функции
 						Times = Xxx(RGB, info.biHeight, info.biWidth, 10, RGBresult);
 						summ += omp_get_wtime() - time_Start;
 					}
-					paralTime = summ / 3;
-					out << " " << Round(paralTime, 3) << ";" << " " << Round(posledTime / paralTime, 3) << ";" << Round(Times[0], 5) << ";" << Times[1] << ";" << Round(Times[0], 5) << ";" << Round(Times[0], 5) << ";" << Round(Times[0], 5) << ";";
-					cout << Round(paralTime, 3) << "\t" << Round(posledTime / paralTime, 3) << "\t" << Round(Times[0], 5) << "\t" << Times[1] << "\t" << Round(Times[0], 5) << "\t" << Round(Times[0], 5) << "\t" << Round(Times[0], 5) << "\t";
+					paralTime = summ / 1;
+					out << " " << Round(paralTime, 3) << ";" << " " << Round(posledTime / paralTime, 3) << ";" << Round(Times[0], 5) << ";" << Round(Times[1], 5) << ";" << Round(Times[2], 5) << ";" << Round(Times[3], 5) << ";" << Round(Times[4], 5) << ";";
+					cout << Round(paralTime, 3) << "\t" << Round(posledTime / paralTime, 3) << "\t" << Round(Times[0], 5) << "\t" << Round(Times[1], 5) << "\t" << Round(Times[2], 5) << "\t" << Round(Times[3], 5) << "\t" << Round(Times[4], 5) << "\t";
 					out << "\n";
 					cout << "\n";
 				}
