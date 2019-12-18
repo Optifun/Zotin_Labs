@@ -1004,7 +1004,7 @@ private:
 		if (m != _m.m || n != _m.n)
 			throw new exception("Недопустимо сложение матриц разной размерности");
 		Matrix<Type> res = Matrix<Type>(n, m);
-		#pragma omp parallel for shared(res, arr, _m)
+		#pragma omp parallel for shared(res, _m)
 		for (long i = 0; i < n; i++)
 			for (long j = 0; j < m; j++)
 				res.arr[i][j] = arr[i][j] - _m.arr[i][j];
@@ -1022,7 +1022,7 @@ private:
 		int t2 = step * 1 + mod;
 		int t3 = t2 + step;
 		int t4 = t3 + step;
-		#pragma omp parallel sections shared(res, arr, _m) firstprivate(t1, t2, t3, t4, step)
+		#pragma omp parallel sections shared(res, _m) firstprivate(t1, t2, t3, t4, step)
 		{
 			#pragma omp section
 			{
